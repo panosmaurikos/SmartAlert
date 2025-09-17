@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/loginActivity">
+
+    <activity
+        android:id="@+id/loginActivity"
+        android:name="com.example.smartalert.presentation.ui.LoginActivity"
+        android:label="Login"
+        tools:layout="@layout/activity_login" >
+
+        <action
+            android:id="@+id/action_login_to_register"
+            app:destination="@id/registerActivity" />
+    </activity>
+
+    <activity
+        android:id="@+id/registerActivity"
+        android:name="com.example.smartalert.presentation.ui.RegisterActivity"
+        android:label="Register"
+        tools:layout="@layout/activity_register" >
+
+        <action
+            android:id="@+id/action_register_to_login"
+            app:destination="@id/loginActivity" />
+    </activity>
+
+    <activity
+        android:id="@+id/mainActivity"
+        android:name="com.example.smartalert.presentation.ui.MainActivity"
+        android:label="Main"
+        tools:layout="@layout/activity_main" >
+
+        <action
+            android:id="@+id/action_main_to_login"
+            app:destination="@id/loginActivity" />
+    </activity>
+</navigation>

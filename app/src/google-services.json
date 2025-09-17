@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "210412982560",
+    "project_id": "smartalert-ce3b9",
+    "storage_bucket": "smartalert-ce3b9.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:210412982560:android:16a7eba33fdb7e5984c745",
+        "android_client_info": {
+          "package_name": "com.example.smartalert"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA2C5I_EIkYDoK9B-WxI79RLHagtk8Izp8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

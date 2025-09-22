@@ -1,4 +1,64 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Έξυπνη Ειδοποίηση</string>
+        <!-- Login Activity -->
+        <string name="welcome_back">Καλώς Ήρθες 👋</string>
+        <string name="password_hint">Κωδικός</string>
+        <string name="login_button">Σύνδεση</string>
+        <string name="register_prompt">Δεν έχεις λογαριασμό; Εγγραφή</string>
+
+        <!-- Register Activity -->
+        <string name="create_account">Δημιουργία Λογαριασμού</string>
+        <string name="confirm_password_hint">Επιβεβαίωση Κωδικού</string>
+        <string name="register_button">Εγγραφή</string>
+        <string name="login_prompt">Έχεις ήδη λογαριασμό; Σύνδεση</string>
+
+        <!-- Main Activity -->
+        <string name="welcome_user">Καλώς ήρθες, %s!</string>
+        <string name="report_incident">Αναφορά Συμβάντος</string>
+        <string name="logout_button">Αποσύνδεση</string>
+
+        <!-- Common -->
+        <string name="error_email_required">Συμπλήρωσε email</string>
+        <string name="error_password_required">Συμπλήρωσε κωδικό</string>
+
+        <!-- Report Incident Activity -->
+        <string name="comments">Σχόλια</string>
+        <string name="photo_optional">Φωτογραφία</string>
+        <string name="take_photo">Λήψη Φωτογραφίας</string>
+        <string name="submit_incident">Υποβολή Συμβάντος</string>
+        <string name="incident_type">Τύπος Συμβάντος</string>
+        <string name="select_incident_type">Επέλεξε τύπο συμβάντος</string>
+
+        <!-- Error Messages -->
+        <string name="error_select_incident_type">Επέλεξε τύπο συμβάντος</string>
+        <string name="error_enter_comments">Συμπλήρωσε σχόλια</string>
+        <string name="location_obtained">Η τοποθεσία λήφθηκε</string>
+        <string name="location_error">Σφάλμα λήψης τοποθεσίας</string>
+        <string name="photo_captured">Φωτογραφία λήφθηκε</string>
+        <string name="incident_reported">Το συμβάν αναφέρθηκε</string>
+
+        <string name="incident_type_fire">Πυρκαγιά</string>
+        <string name="incident_type_flood">Πλημμύρα</string>
+        <string name="incident_type_earthquake">Σεισμός</string>
+        <string name="incident_type_storm">Ανεμοθύελλα</string>
+        <string name="incident_type_other">Άλλο</string>
+
+        <string name="incident_reported_successfully">Το συμβάν αναφέρθηκε επιτυχώς!</string>
+        <string name="error_prefix">Σφάλμα: </string>
+        <string name="location_obtained_successfully">Η τοποθεσία λήφθηκε επιτυχώς</string>
+        <string name="could_not_get_location">Δεν ήταν δυνατή η λήψη τοποθεσίας</string>
+        <string name="location_error_prefix">Σφάλμα τοποθεσίας: </string>
+        <string name="failed_to_start_camera">Αποτυχία εκκίνησης κάμερας</string>
+        <string name="camera_not_initialized">Η κάμερα δεν έχει αρχικοποιηθεί</string>
+        <string name="error_creating_image_file">Σφάλμα δημιουργίας αρχείου εικόνας</string>
+        <string name="retake_photo">Ξανατράβα Φωτογραφία</string>
+        <string name="failed_to_load_image">Αποτυχία φόρτωσης εικόνας</string>
+        <string name="failed_to_capture_photo_prefix">Αποτυχία λήψης φωτογραφίας: </string>
+        <string name="please_select_incident_type">Παρακαλώ επέλεξε τύπο συμβάντος</string>
+        <string name="please_enter_comments">Παρακαλώ συμπλήρωσε σχόλια</string>
+        <string name="getting_location">Λήψη τοποθεσίας...</string>
+        <string name="location_permission_denied">Άρνηση πρόσβασης στην τοποθεσία</string>
+        <string name="camera_permission_denied">Άρνηση πρόσβασης στην κάμερα</string>
+        <string name="view_statistics">Προβολή Στατιστικών</string>
+        <string name="statistics">Στατιστικά</string>
 </resources>

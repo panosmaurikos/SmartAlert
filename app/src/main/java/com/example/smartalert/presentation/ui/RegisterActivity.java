@@ -1,8 +1,10 @@
 package com.example.smartalert.presentation.ui;
 
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -18,6 +20,8 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 
 public class RegisterActivity extends AppCompatActivity {
+    private static final String TAG = "RegisterActivity";
+
     private AuthViewModel viewModel;
     private TextInputEditText editTextEmail, editTextPassword;
     private MaterialButton buttonReg;
@@ -43,11 +47,11 @@ public class RegisterActivity extends AppCompatActivity {
         });
 
         buttonReg.setOnClickListener(v -> {
-            String email = editTextEmail.getText().toString();
-            String password = editTextPassword.getText().toString();
-            String role = "user"; // Default, add UI if needed for "employee"
+            String email = editTextEmail.getText() != null ? editTextEmail.getText().toString().trim() : "";
+            String password = editTextPassword.getText() != null ? editTextPassword.getText().toString().trim() : "";
+            String role = "user";
 
-            if (TextUtils.isEmpty(email) || TextUtils.isEmpty(password)) {
+            if (email.isEmpty() || password.isEmpty()) {
                 Toast.makeText(this, "Enter email and password", Toast.LENGTH_SHORT).show();
                 return;
             }
@@ -57,7 +61,8 @@ public class RegisterActivity extends AppCompatActivity {
         });
 
         viewModel.getUserLiveData().observe(this, user -> {
-            progressBar.setVisibility(View.GONE);
+            Log.d(TAG, "userLiveData observer fired: user=" + user);
+            if (progressBar.getVisibility() == View.VISIBLE) progressBar.setVisibility(View.GONE);
             if (user != null) {
                 Toast.makeText(this, "Account created", Toast.LENGTH_SHORT).show();
                 startActivity(new Intent(this, MainActivity.class));
@@ -66,15 +71,18 @@ public class RegisterActivity extends AppCompatActivity {
         });
 
         viewModel.getErrorLiveData().observe(this, error -> {
-            progressBar.setVisibility(View.GONE);
-            Toast.makeText(this, error, Toast.LENGTH_SHORT).show();
+            if (progressBar.getVisibility() == View.VISIBLE) progressBar.setVisibility(View.GONE);
+            if (error != null) {
+                Log.w(TAG, "Register error: " + error);
+                Toast.makeText(this, error, Toast.LENGTH_SHORT).show();
+            }
         });
     }
 
     @Override
     protected void onStart() {
         super.onStart();
-        if (viewModel.getUserLiveData().getValue() != null) {
+        if (com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser() != null) {
             startActivity(new Intent(this, MainActivity.class));
             finish();
         }

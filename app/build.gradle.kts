@@ -1,5 +1,4 @@
 plugins {
-    //id("com.android.application")
     alias(libs.plugins.android.application)
     id("com.google.gms.google-services")
 }
@@ -57,8 +56,19 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.8.6")
     implementation("androidx.lifecycle:lifecycle-viewmodel:2.8.6")
     implementation("androidx.lifecycle:lifecycle-livedata:2.8.6")
-    implementation("com.google.android.material:material:1.12.0")
+    implementation("androidx.compose.material3:material3:1.3.2")
+    implementation("androidx.compose.material3:material3-window-size-class:1.3.2")
+    implementation("androidx.compose.material3:material3-adaptive-navigation-suite:1.5.0-alpha04")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
+    implementation("com.google.android.material:material:1.12.0")
+    implementation ("com.google.android.gms:play-services-location:21.0.1")
+    val camerax_version = "1.5.0"
+    implementation("androidx.camera:camera-core:${camerax_version}")
+    implementation("androidx.camera:camera-camera2:${camerax_version}")
+    implementation("androidx.camera:camera-lifecycle:${camerax_version}")
+    implementation("androidx.camera:camera-view:${camerax_version}") // For PreviewView
+    implementation("androidx.camera:camera-extensions:${camerax_version}") // Optional enhancements
+
 
 
     implementation("androidx.appcompat:appcompat:1.7.0")

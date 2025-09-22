@@ -1,10 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">SmartAlert</string>
-    <string name="login">Login</string>
-    <string name="Register">Register</string>
-    <string name="password">password</string>
-    <string name="email">email</string>
-    <string name="click_to_login">Click to login</string>
-    <string name="click_to_register">click_to_register</string>
-    <string name="logout">logout</string>
+
+    <!-- Login Activity -->
+    <string name="welcome_back">Welcome Back 👋</string>
+    <string name="email_hint">Email</string>
+    <string name="password_hint">Password</string>
+    <string name="login_button">Login</string>
+    <string name="register_prompt">Don\'t have an account? Register</string>
+
+    <!-- Register Activity -->
+    <string name="create_account">Create Account</string>
+    <string name="confirm_password_hint">Confirm Password</string>
+    <string name="register_button">Register</string>
+    <string name="login_prompt">Already have an account? Login</string>
+
+    <!-- Main Activity -->
+    <string name="welcome_user">Welcome, %s!</string>
+    <string name="report_incident">Report Incident</string>
+    <string name="logout_button">Logout</string>
+
+    <!-- Common -->
+    <string name="error_email_required">Enter email</string>
+    <string name="error_password_required">Enter password</string>
+
+    <!-- Report Incident Activity -->
+    <string name="comments">Comments</string>
+    <string name="photo_optional">Photo (Optional)</string>
+    <string name="take_photo">Take Photo</string>
+    <string name="submit_incident">Submit Incident</string>
+    <string name="incident_type">Incident Type</string>
+    <string name="select_incident_type">Select incident type</string>
+
+    <!-- Error Messages -->
+    <string name="error_select_incident_type">Please select an incident type</string>
+    <string name="error_enter_comments">Please enter comments</string>
+    <string name="location_obtained">Location obtained</string>
+    <string name="location_error">Location error</string>
+    <string name="photo_captured">Photo captured</string>
+    <string name="incident_reported">Incident reported</string>
+
+    <string name="incident_type_fire">Fire</string>
+    <string name="incident_type_flood">Flood</string>
+    <string name="incident_type_earthquake">Earthquake</string>
+    <string name="incident_type_storm">Storm</string>
+    <string name="incident_type_other">Other</string>
+
+    <string name="incident_reported_successfully">Incident reported successfully!</string>
+    <string name="error_prefix">Error: </string>
+    <string name="location_obtained_successfully">Location obtained successfully</string>
+    <string name="could_not_get_location">Could not get location</string>
+    <string name="location_error_prefix">Location error: </string>
+    <string name="failed_to_start_camera">Failed to start camera</string>
+    <string name="camera_not_initialized">Camera not initialized</string>
+    <string name="error_creating_image_file">Error creating image file</string>
+    <string name="retake_photo">Retake Photo</string>
+    <string name="failed_to_load_image">Failed to load image</string>
+    <string name="failed_to_capture_photo_prefix">Failed to capture photo: </string>
+    <string name="please_select_incident_type">Please select an incident type</string>
+    <string name="please_enter_comments">Please enter comments</string>
+    <string name="getting_location">Getting location...</string>
+    <string name="location_permission_denied">Location permission denied</string>
+    <string name="camera_permission_denied">Camera permission denied</string>
+    <string name="view_statistics">View Statistics</string>
+    <string name="statistics">Statistics</string>
 </resources>

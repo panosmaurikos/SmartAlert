@@ -2,10 +2,10 @@ package com.example.smartalert.presentation.ui;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.TextView;
 
-import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 
@@ -13,9 +13,11 @@ import com.example.smartalert.R;
 import com.google.firebase.auth.FirebaseAuth;
 
 public class MainActivity extends AppCompatActivity {
+    private static final String TAG = "MainActivity";
+
     private com.example.smartalert.presentation.viewmodels.AuthViewModel viewModel;
     private TextView textViewUserDetails;
-    private Button buttonLogout;
+    private Button buttonLogout, btnStatistics, btnReport;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -24,16 +26,36 @@ public class MainActivity extends AppCompatActivity {
 
         viewModel = new ViewModelProvider(this).get(com.example.smartalert.presentation.viewmodels.AuthViewModel.class);
 
-        textViewUserDetails = findViewById(R.id.user_details);
-        buttonLogout = findViewById(R.id.logout);
+        initViews();
+
+        setupClickListeners();
 
         viewModel.getUserLiveData().observe(this, user -> {
+            Log.w(TAG, "userLiveData observer: " + user);
             if (user == null) {
                 startActivity(new Intent(this, LoginActivity.class));
                 finish();
             } else {
                 textViewUserDetails.setText("Logged in as: " + user.getEmail());
             }
+        });
+    }
+
+    private void initViews() {
+        textViewUserDetails = findViewById(R.id.user_details);
+        buttonLogout = findViewById(R.id.logout);
+        btnStatistics = findViewById(R.id.btn_statistics);
+        btnReport = findViewById(R.id.btn_report);
+    }
+
+    private void setupClickListeners() {
+        btnReport.setOnClickListener(v -> {
+            startActivity(new Intent(MainActivity.this, ReportIncidentActivity.class));
+        });
+
+        btnStatistics.setOnClickListener(v -> {
+            Intent intent = new Intent(MainActivity.this, UserStatisticsActivity.class);
+            startActivity(intent);
         });
 
         buttonLogout.setOnClickListener(v -> {
@@ -46,7 +68,8 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        if (viewModel.getUserLiveData().getValue() == null) {
+        if (FirebaseAuth.getInstance().getCurrentUser() == null) {
+            Log.d(TAG, "onStart: no current user -> LoginActivity");
             startActivity(new Intent(this, LoginActivity.class));
             finish();
         }

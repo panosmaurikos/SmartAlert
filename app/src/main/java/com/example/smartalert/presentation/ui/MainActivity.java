@@ -17,7 +17,7 @@ public class MainActivity extends AppCompatActivity {
 
     private com.example.smartalert.presentation.viewmodels.AuthViewModel viewModel;
     private TextView textViewUserDetails;
-    private Button buttonLogout, btnStatistics, btnReport;
+    private Button buttonLogout, statisticsButton, btnReport;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,7 +44,7 @@ public class MainActivity extends AppCompatActivity {
     private void initViews() {
         textViewUserDetails = findViewById(R.id.user_details);
         buttonLogout = findViewById(R.id.logout);
-        btnStatistics = findViewById(R.id.btn_statistics);
+        statisticsButton = findViewById(R.id.btn_statistics);
         btnReport = findViewById(R.id.btn_report);
     }
 
@@ -53,9 +53,8 @@ public class MainActivity extends AppCompatActivity {
             startActivity(new Intent(MainActivity.this, ReportIncidentActivity.class));
         });
 
-        btnStatistics.setOnClickListener(v -> {
-            Intent intent = new Intent(MainActivity.this, UserStatisticsActivity.class);
-            startActivity(intent);
+        statisticsButton.setOnClickListener(v -> {
+            startActivity(new Intent(MainActivity.this, StatisticsActivity.class));
         });
 
         buttonLogout.setOnClickListener(v -> {

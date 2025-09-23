@@ -12,6 +12,7 @@ public class Incident {
     private Date timestamp;
     private String photoUrl;
     private String status;
+    private String location;
 
     public Incident() {}
 
@@ -26,6 +27,7 @@ public class Incident {
         this.timestamp = timestamp;
         this.photoUrl = photoUrl;
         this.status = "pending";
+
     }
 
     // Getters and setters
@@ -47,4 +49,10 @@ public class Incident {
     public void setPhotoUrl(String photoUrl) { this.photoUrl = photoUrl; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    public String getLocation() {
+        return location;
+    }
+    public void setLocation(String location) {
+        this.location = location;
+    }
 }

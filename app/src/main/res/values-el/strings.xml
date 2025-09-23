@@ -61,4 +61,18 @@
         <string name="camera_permission_denied">Άρνηση πρόσβασης στην κάμερα</string>
         <string name="view_statistics">Προβολή Στατιστικών</string>
         <string name="statistics">Στατιστικά</string>
+        <string name="filters">Φίλτρα</string>
+        <string name="global_statistics">Στατιστικά</string>
+        <string name="overview">Επισκόπηση</string>
+        <string name="total_incidents">Σύνολο Περιστατικών: %d</string>
+        <string name="total_users">Σύνολο Χρηστών: %d</string>
+        <string name="incidents_by_type">Περιστατικά ανά Τύπο</string>
+        <string name="incidents_by_location">Περιστατικά ανά Τοποθεσία</string>
+        <string name="back_to_main">Πίσω στην Κύρια</string>
+        <string name="start_date">Ημερομηνία Έναρξης</string>
+        <string name="end_date">Ημερομηνία Λήξης</string>
+        <string name="apply_filters">Εφαρμογή Φίλτρων</string>
+        <string name="all">Όλα</string>
+        <string name="no_data">Δεν υπάρχουν δεδομένα</string>
+        <string name="error_occurred">Σφάλμα: %s</string>
 </resources>

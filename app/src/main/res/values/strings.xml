@@ -64,4 +64,22 @@
     <string name="camera_permission_denied">Camera permission denied</string>
     <string name="view_statistics">View Statistics</string>
     <string name="statistics">Statistics</string>
+
+    <string name="filters">Filters</string>
+    <string name="global_statistics">Global Statistics</string>
+    <string name="overview">Overview</string>
+    <string name="total_incidents">Total Incidents: %d</string>
+    <string name="total_users">Total Users: %d</string>
+    <string name="incidents_by_type">Incidents by Type</string>
+    <string name="incidents_by_location">Incidents by Location</string>
+    <string name="back_to_main">Back to Main</string>
+    <string name="start_date">Start Date</string>
+    <string name="end_date">End Date</string>
+    <string name="apply_filters">Apply Filters</string>
+    <string name="all">All</string>
+    <string name="no_data">No data available</string>
+    <string name="error_occurred">Error: %s</string>
+    <string name="incidents_count">%d incidents</string>
+
+
 </resources>

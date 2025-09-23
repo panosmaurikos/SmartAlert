@@ -30,7 +30,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.SmartAlert">
         <activity
-            android:name=".presentation.ui.UserStatisticsActivity"
+            android:name=".presentation.ui.StatisticsActivity"
             android:exported="false" />
         <activity
             android:name=".presentation.ui.ReportIncidentActivity"

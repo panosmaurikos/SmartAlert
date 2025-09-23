@@ -1,9 +1,17 @@
 // presentation/viewmodel/IncidentViewModel.java
 package com.example.smartalert.presentation.viewmodels;
 
+import static androidx.lifecycle.AndroidViewModel_androidKt.getApplication;
+
+import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
+
+import android.app.Application;
+import android.location.Geocoder;
+import android.location.Address;
+
 
 import com.example.smartalert.domain.model.Incident;
 import com.example.smartalert.domain.repository.IncidentRepository;
@@ -12,19 +20,26 @@ import com.example.smartalert.data.repository.IncidentRepositoryImpl;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.firebase.auth.FirebaseAuth;
 
+import java.io.IOException;
+import java.util.List;
+
 import java.util.Date;
+import java.util.Locale;
 import java.util.UUID;
 
-public class IncidentViewModel extends ViewModel {
+public class IncidentViewModel extends AndroidViewModel {
     private static final String TAG = "IncidentViewModel";
 
     private SubmitIncidentUseCase submitIncidentUseCase;
     private MutableLiveData<Boolean> submitResult = new MutableLiveData<>();
     private MutableLiveData<String> errorMessage = new MutableLiveData<>();
+    private Geocoder geocoder;
 
-    public IncidentViewModel() {
+    public IncidentViewModel(Application application) {
+        super(application);
         IncidentRepository repository = new IncidentRepositoryImpl();
         submitIncidentUseCase = new SubmitIncidentUseCase(repository);
+        this.geocoder = new Geocoder(application.getApplicationContext(), Locale.getDefault());
     }
 
     public LiveData<Boolean> getSubmitResult() {
@@ -42,10 +57,15 @@ public class IncidentViewModel extends ViewModel {
         Incident incident = new Incident(userId, type, comments, latitude, longitude, new Date(), photoUrl);
         incident.setId(incidentId);
 
+        // Υπολογισμός location name με Geocoder
+        String locationName = getLocationName(latitude, longitude);
+        incident.setLocation(locationName);
+
         // Log the incident details
         System.out.println("Submitting incident: " + incidentId);
         System.out.println("Type: " + type);
         System.out.println("Location: " + latitude + ", " + longitude);
+        System.out.println("Location Name: " + locationName); // <-- Προσθήκη
         System.out.println("Photo URL: " + photoUrl);
 
         submitIncidentUseCase.execute(incident, task -> {
@@ -59,4 +79,30 @@ public class IncidentViewModel extends ViewModel {
             }
         });
     }
+
+    private String getLocationName(double latitude, double longitude) {
+        try {
+            List<Address> addresses = geocoder.getFromLocation(latitude, longitude, 1);
+            if (addresses != null && !addresses.isEmpty()) {
+                Address address = addresses.get(0);
+                // Κατασκευή του ονόματος τοποθεσίας (π.χ. "Mountain View, Ηνωμένες Πολιτείες")
+                StringBuilder sb = new StringBuilder();
+                if (address.getLocality() != null) {
+                    sb.append(address.getLocality()).append(", ");
+                }
+                if (address.getAdminArea() != null) {
+                    sb.append(address.getAdminArea()).append(", ");
+                }
+                if (address.getCountryName() != null) {
+                    sb.append(address.getCountryName());
+                }
+                return sb.toString().trim();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        // Αν αποτύχει, επιστρέφουμε τις συντεταγμένες ως fallback
+        return String.format(Locale.getDefault(), "%.2f, %.2f", latitude, longitude);
+    }
 }
+

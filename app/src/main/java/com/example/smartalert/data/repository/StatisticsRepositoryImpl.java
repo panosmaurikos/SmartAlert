@@ -16,14 +16,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.TimeZone;
 
 public class StatisticsRepositoryImpl implements StatisticsRepository {
 
-    private static final String TAG = "StatisticsRepository";
     private FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-    // Map για backward compatibility (Ελληνικά -> Αγγλικά)
     private Map<String, String> greekToEnglishMap;
 
     public StatisticsRepositoryImpl() {
@@ -59,6 +57,7 @@ public class StatisticsRepositoryImpl implements StatisticsRepository {
         query.get().addOnCompleteListener(task -> {
             if (task.isSuccessful()) {
                 Statistics statistics = processIncidents(task, incidentType);
+
                 db.collection("users").get().addOnCompleteListener(userTask -> {
                     if (userTask.isSuccessful()) {
                         statistics.setTotalUsers(userTask.getResult().size());
@@ -84,13 +83,13 @@ public class StatisticsRepositoryImpl implements StatisticsRepository {
         List<Incident> allIncidents = new ArrayList<>();
         for (QueryDocumentSnapshot document : task.getResult()) {
             Incident incident = document.toObject(Incident.class);
+
             if (shouldIncludeIncident(incident, requestedType)) {
                 allIncidents.add(incident);
                 filteredIncidents++;
             }
         }
 
-        // Ομαδοποίηση ανά τύπο
         for (Incident incident : allIncidents) {
             String typeKey = convertToEnglishType(incident.getType());
 
@@ -108,7 +107,6 @@ public class StatisticsRepositoryImpl implements StatisticsRepository {
             incidentsByDate.put(dateKey, incidentsByDate.getOrDefault(dateKey, 0) + 1);
         }
 
-        // Υπολογισμός Alarm Levels
         Map<String, Double> alarmLevels = calculateAlarmLevels(allIncidents);
         statistics.setAlarmLevels(alarmLevels);
 
@@ -117,67 +115,110 @@ public class StatisticsRepositoryImpl implements StatisticsRepository {
         statistics.setIncidentsByType(incidentsByType);
         statistics.setIncidentsByLocation(incidentsByLocation);
         statistics.setIncidentsByDate(incidentsByDate);
+
         return statistics;
     }
 
     private Map<String, Double> calculateAlarmLevels(List<Incident> incidents) {
         Map<String, Double> alarmLevels = new HashMap<>();
-        Map<String, List<Incident>> incidentsByLocation = new HashMap<>();
+        Map<String, List<Incident>> incidentsByCluster = clusterIncidentsByProximity(incidents);
 
-        // Ομαδοποίηση ανά τοποθεσία
-        for (Incident incident : incidents) {
-            String location = incident.getLocation();
-            incidentsByLocation.computeIfAbsent(location, k -> new ArrayList<>()).add(incident);
-        }
-
-        // Υπολογισμός βάρους για κάθε τοποθεσία
-        for (String location : incidentsByLocation.keySet()) {
-            List<Incident> list = incidentsByLocation.get(location);
-            double weight = calculateWeightForLocation(list);
-            alarmLevels.put(location, weight);
+        for (Map.Entry<String, List<Incident>> entry : incidentsByCluster.entrySet()) {
+            List<Incident> cluster = entry.getValue();
+            double alarmLevel = calculateClusterAlarmLevel(cluster);
+            alarmLevels.put(entry.getKey(), alarmLevel);
         }
 
         return alarmLevels;
     }
 
-    private double calculateWeightForLocation(List<Incident> incidents) {
-        if (incidents.isEmpty()) return 0.0;
+    private Map<String, List<Incident>> clusterIncidentsByProximity(List<Incident> incidents) {
+        Map<String, List<Incident>> clusters = new HashMap<>();
+        double CLUSTER_DISTANCE_KM = 50.0;
 
-        // Κριτήριο 1: Πλήθος μοναδικών χρηστών
-        long userCount = incidents.stream()
-                .map(Incident::getUserId)
-                .distinct()
-                .count();
+        for (Incident incident : incidents) {
+            boolean addedToExistingCluster = false;
 
-        // Κριτήριο 2: Γεωγραφική συνοχή (απόσταση)
-        double distanceWeight = 1.0;
-        if (incidents.size() > 1) {
-            double totalDistance = 0.0;
-            int pairs = 0;
-            for (int i = 0; i < incidents.size(); i++) {
-                for (int j = i + 1; j < incidents.size(); j++) {
-                    double dist = calculateDistance(
-                            incidents.get(i).getLatitude(), incidents.get(i).getLongitude(),
-                            incidents.get(j).getLatitude(), incidents.get(j).getLongitude()
-                    );
-                    totalDistance += dist;
-                    pairs++;
+            for (String clusterKey : clusters.keySet()) {
+                Incident clusterCenter = parseClusterKey(clusterKey);
+                double distance = calculateDistance(
+                        clusterCenter.getLatitude(), clusterCenter.getLongitude(),
+                        incident.getLatitude(), incident.getLongitude()
+                );
+
+                if (distance <= CLUSTER_DISTANCE_KM * 1000) {
+                    clusters.get(clusterKey).add(incident);
+                    addedToExistingCluster = true;
+                    break;
                 }
             }
-            if (pairs > 0) {
-                double avgDistance = totalDistance / pairs;
-                // Αν η μέση απόσταση > 200km, μειώνουμε το βάρος
-                if (avgDistance > 200_000) {
-                    distanceWeight = 0.1; // ή άλλη τιμή (π.χ. 0.0)
-                }
+
+            if (!addedToExistingCluster) {
+                String newClusterKey = createClusterKey(incident);
+                List<Incident> newCluster = new ArrayList<>();
+                newCluster.add(incident);
+                clusters.put(newClusterKey, newCluster);
             }
         }
 
-        return userCount * distanceWeight;
+        return clusters;
+    }
+
+    private double calculateClusterAlarmLevel(List<Incident> cluster) {
+        if (cluster.isEmpty()) return 0.0;
+
+        long uniqueUsers = cluster.stream()
+                .map(Incident::getUserId)
+                .distinct()
+                .count();
+        double userScore = (uniqueUsers / (double) Math.max(cluster.size(), 1)) * 0.4;
+
+        double timeDensityScore = calculateTimeDensityScore(cluster) * 0.3;
+
+        double geographicCohesionScore = calculateGeographicCohesionScore(cluster) * 0.3;
+
+        return (userScore + timeDensityScore + geographicCohesionScore) * 10;
+    }
+
+    private double calculateTimeDensityScore(List<Incident> cluster) {
+        if (cluster.size() < 2) return 0.5;
+
+        long timeRange = 24 * 60 * 60 * 1000;
+        long firstTimestamp = cluster.stream()
+                .mapToLong(inc -> inc.getTimestamp().getTime())
+                .min().orElse(0);
+        long lastTimestamp = cluster.stream()
+                .mapToLong(inc -> inc.getTimestamp().getTime())
+                .max().orElse(0);
+
+        long actualRange = lastTimestamp - firstTimestamp;
+        if (actualRange == 0) return 1.0;
+
+        return Math.min(1.0, (double) timeRange / actualRange);
+    }
+
+    private double calculateGeographicCohesionScore(List<Incident> cluster) {
+        if (cluster.size() < 2) return 0.5;
+
+        double totalDistance = 0;
+        int comparisons = 0;
+
+        for (int i = 0; i < cluster.size(); i++) {
+            for (int j = i + 1; j < cluster.size(); j++) {
+                totalDistance += calculateDistance(
+                        cluster.get(i).getLatitude(), cluster.get(i).getLongitude(),
+                        cluster.get(j).getLatitude(), cluster.get(j).getLongitude()
+                );
+                comparisons++;
+            }
+        }
+
+        double avgDistance = totalDistance / comparisons;
+        return Math.max(0, 1.0 - (avgDistance / 200000.0));
     }
 
     private double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
-        final int R = 6371000; // Earth’s radius in meters
+        final int R = 6371000;
         double dLat = Math.toRadians(lat2 - lat1);
         double dLon = Math.toRadians(lon2 - lon1);
         double a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
@@ -185,6 +226,18 @@ public class StatisticsRepositoryImpl implements StatisticsRepository {
                         Math.sin(dLon / 2) * Math.sin(dLon / 2);
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return R * c;
+    }
+
+    private String createClusterKey(Incident incident) {
+        return incident.getLatitude() + "," + incident.getLongitude();
+    }
+
+    private Incident parseClusterKey(String clusterKey) {
+        String[] parts = clusterKey.split(",");
+        Incident incident = new Incident();
+        incident.setLatitude(Double.parseDouble(parts[0]));
+        incident.setLongitude(Double.parseDouble(parts[1]));
+        return incident;
     }
 
     private boolean shouldIncludeIncident(Incident incident, String requestedType) {
@@ -204,6 +257,8 @@ public class StatisticsRepositoryImpl implements StatisticsRepository {
     }
 
     private String formatDate(Date date) {
-        return new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(date);
+        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
+        sdf.setTimeZone(TimeZone.getTimeZone("Europe/Athens"));
+        return sdf.format(date);
     }
 }

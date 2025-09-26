@@ -68,7 +68,7 @@
         <string name="total_users">Σύνολο Χρηστών: %d</string>
         <string name="incidents_by_type">Περιστατικά ανά Τύπο</string>
         <string name="incidents_by_location">Περιστατικά ανά Τοποθεσία</string>
-        <string name="back_to_main">Πίσω στην Κύρια</string>
+        <string name="back_to_main">Πίσω στην Κύρια Σελίδα</string>
         <string name="start_date">Ημερομηνία Έναρξης</string>
         <string name="end_date">Ημερομηνία Λήξης</string>
         <string name="apply_filters">Εφαρμογή Φίλτρων</string>

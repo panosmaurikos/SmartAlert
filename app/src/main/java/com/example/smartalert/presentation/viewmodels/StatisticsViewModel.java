@@ -20,12 +20,13 @@ public class StatisticsViewModel extends ViewModel {
 
     private MutableLiveData<Integer> totalIncidents = new MutableLiveData<>();
     private MutableLiveData<Integer> totalUsers = new MutableLiveData<>();
-    private MutableLiveData<Map<String, Integer>> incidentsByTypeCount = new MutableLiveData<>(); // <-- ΝΕΟ ΟΝΟΜΑ
-    private MutableLiveData<Map<String, List<Incident>>> incidentsByType = new MutableLiveData<>(); // <-- ΝΕΟ
+    private MutableLiveData<Map<String, Integer>> incidentsByTypeCount = new MutableLiveData<>();
+    private MutableLiveData<Map<String, List<Incident>>> incidentsByType = new MutableLiveData<>();
     private MutableLiveData<Map<String, Integer>> incidentsByLocation = new MutableLiveData<>();
     private MutableLiveData<Map<String, Integer>> incidentsByDate = new MutableLiveData<>();
     private MutableLiveData<String> errorMessage = new MutableLiveData<>();
     private MutableLiveData<Boolean> isLoading = new MutableLiveData<>();
+    private MutableLiveData<Map<String, Double>> alarmLevels = new MutableLiveData<>();
 
     public StatisticsViewModel() {
         StatisticsRepository repository = new StatisticsRepositoryImpl();
@@ -33,14 +34,12 @@ public class StatisticsViewModel extends ViewModel {
     }
 
     public LiveData<Integer> getTotalIncidents() { return totalIncidents; }
+    public LiveData<Integer> getTotalUsers() { return totalUsers; } // <-- ADD THIS METHOD
     public LiveData<Map<String, Integer>> getIncidentsByTypeCount() { return incidentsByTypeCount; }
     public LiveData<Map<String, List<Incident>>> getIncidentsByType() { return incidentsByType; }
     public LiveData<Map<String, Integer>> getIncidentsByLocation() { return incidentsByLocation; }
     public LiveData<Map<String, Integer>> getIncidentsByDate() { return incidentsByDate; }
-    private MutableLiveData<Map<String, Double>> alarmLevels = new MutableLiveData<>();
-
     public LiveData<Map<String, Double>> getAlarmLevels() { return alarmLevels; }
-
     public LiveData<String> getErrorMessage() { return errorMessage; }
     public LiveData<Boolean> getIsLoading() { return isLoading; }
 
@@ -54,6 +53,7 @@ public class StatisticsViewModel extends ViewModel {
                         isLoading.setValue(false);
                         alarmLevels.setValue(statistics.getAlarmLevels());
                         totalIncidents.setValue(statistics.getTotalIncidents());
+                        totalUsers.setValue(statistics.getTotalUsers());
                         incidentsByTypeCount.setValue(statistics.getIncidentsByTypeCount());
                         incidentsByType.setValue(statistics.getIncidentsByType());
                         incidentsByLocation.setValue(statistics.getIncidentsByLocation());

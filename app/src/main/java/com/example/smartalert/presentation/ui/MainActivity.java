@@ -3,6 +3,7 @@ package com.example.smartalert.presentation.ui;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
@@ -11,6 +12,7 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.example.smartalert.R;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
@@ -27,7 +29,6 @@ public class MainActivity extends AppCompatActivity {
         viewModel = new ViewModelProvider(this).get(com.example.smartalert.presentation.viewmodels.AuthViewModel.class);
 
         initViews();
-
         setupClickListeners();
 
         viewModel.getUserLiveData().observe(this, user -> {
@@ -37,8 +38,31 @@ public class MainActivity extends AppCompatActivity {
                 finish();
             } else {
                 textViewUserDetails.setText("Logged in as: " + user.getEmail());
+                checkUserRole(user.getUid());
             }
         });
+    }
+
+    private void checkUserRole(String uid) {
+        FirebaseFirestore.getInstance()
+                .collection("users")
+                .document(uid)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        String role = documentSnapshot.getString("role");
+                        Log.d(TAG, "User role: " + role);
+
+                        if ("admin".equals(role)) {
+                            btnReport.setVisibility(View.GONE);
+                        } else {
+                            btnReport.setVisibility(View.VISIBLE);
+                        }
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Failed to fetch role", e);
+                });
     }
 
     private void initViews() {

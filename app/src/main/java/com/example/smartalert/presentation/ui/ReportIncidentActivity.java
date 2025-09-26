@@ -20,6 +20,7 @@
     import android.net.Uri;
     import android.os.Bundle;
     import android.os.Environment;
+    import android.os.Looper;
     import android.util.Log;
     import android.view.View;
     import android.widget.ArrayAdapter;
@@ -33,7 +34,9 @@
     import com.example.smartalert.R;
     import com.example.smartalert.presentation.viewmodels.IncidentViewModel;
     import com.google.android.gms.location.FusedLocationProviderClient;
+    import com.google.android.gms.location.LocationCallback;
     import com.google.android.gms.location.LocationServices;
+    import com.google.android.gms.location.LocationRequest;
     import com.google.common.util.concurrent.ListenableFuture;
 
     import java.io.File;
@@ -45,6 +48,7 @@
     import java.util.List;
     import java.util.Map;
     import java.util.Locale;
+    import com.google.android.gms.location.LocationResult;
     import java.util.concurrent.ExecutionException;
 
 
@@ -174,22 +178,25 @@
         private void getCurrentLocation() {
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                     == PackageManager.PERMISSION_GRANTED) {
-                locationClient.getLastLocation()
-                        .addOnSuccessListener(this, location -> {
-                            if (location != null) {
-                                latitude = location.getLatitude();
-                                longitude = location.getLongitude();
-                                Log.d(TAG, "Location obtained: " + latitude + ", " + longitude);
-                                Toast.makeText(this, getString(R.string.location_obtained_successfully), Toast.LENGTH_SHORT).show();
-                            } else {
-                                Log.w(TAG, "Location is null");
-                                Toast.makeText(this, getString(R.string.could_not_get_location), Toast.LENGTH_SHORT).show();
-                            }
-                        })
-                        .addOnFailureListener(this, e -> {
-                            Log.e(TAG, "Location error: " + e.getMessage());
-                            Toast.makeText(this, getString(R.string.location_error_prefix) + e.getMessage(), Toast.LENGTH_SHORT).show();
-                        });
+                LocationRequest locationRequest = new LocationRequest.Builder(1000)
+                        .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
+                        .setMaxUpdates(1)
+                        .build();
+                locationClient.requestLocationUpdates(locationRequest, new LocationCallback() {
+                    @Override
+                    public void onLocationResult(LocationResult locationResult) {
+                        Location location = locationResult.getLastLocation();
+                        if (location != null) {
+                            latitude = location.getLatitude();
+                            longitude = location.getLongitude();
+                            Log.d(TAG, "Location obtained: " + latitude + ", " + longitude);
+                            Toast.makeText(ReportIncidentActivity.this, getString(R.string.location_obtained_successfully), Toast.LENGTH_SHORT).show();
+                        } else {
+                            Log.w(TAG, "Location is null");
+                            Toast.makeText(ReportIncidentActivity.this, getString(R.string.could_not_get_location), Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                }, Looper.getMainLooper());
             } else {
                 Log.w(TAG, "Location permission not granted");
             }
@@ -321,20 +328,40 @@
                 return;
             }
 
-            if (latitude == 0.0 && longitude == 0.0) {
-                Toast.makeText(this, getString(R.string.getting_location), Toast.LENGTH_SHORT).show();
-                getCurrentLocation();
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                    != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                        LOCATION_PERMISSION_CODE);
                 return;
             }
 
-            String englishType = incidentTypeMap.get(selectedGreekType);
-            if (englishType == null) {
-                englishType = "other"; // fallback
-            }
-
             progressBar.setVisibility(View.VISIBLE);
-            viewModel.submitIncident(englishType, commentText, latitude, longitude,
-                    photoUri != null ? photoUri.toString() : null);
+
+            LocationRequest locationRequest = new LocationRequest.Builder(1000)
+                    .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
+                    .setMaxUpdates(1)
+                    .build();
+            locationClient.requestLocationUpdates(locationRequest, new LocationCallback() {
+                @Override
+                public void onLocationResult(LocationResult locationResult) {
+                    Location location = locationResult.getLastLocation();
+                    if (location != null) {
+                        double currentLat = location.getLatitude();
+                        double currentLon = location.getLongitude();
+                        Log.d(TAG, "Submitting with fresh location: " + currentLat + ", " + currentLon);
+
+                        String englishType = incidentTypeMap.get(selectedGreekType);
+                        if (englishType == null) englishType = "other";
+
+                        viewModel.submitIncident(englishType, commentText, currentLat, currentLon,
+                                photoUri != null ? photoUri.toString() : null);
+                    } else {
+                        progressBar.setVisibility(View.GONE);
+                        Toast.makeText(ReportIncidentActivity.this, getString(R.string.could_not_get_location), Toast.LENGTH_SHORT).show();
+                    }
+                }
+            }, Looper.getMainLooper());
         }
 
         @Override

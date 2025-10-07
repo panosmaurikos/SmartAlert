@@ -10,104 +10,129 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <TextView
-            android:id="@+id/titleText"
+        <!-- Header -->
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Πλήρεις λεπτομέρειες περιστατικού"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="12dp" />
+            app:cardCornerRadius="12dp"
+            app:cardElevation="4dp"
+            android:layout_marginBottom="16dp">
 
-        <TextView
-            android:id="@+id/locationText"
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:id="@+id/incidentTypeTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="24sp"
+                    android:textStyle="bold"
+                    android:gravity="center"
+                    android:layout_marginBottom="8dp"/>
+
+                <TextView
+                    android:id="@+id/incidentCount"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="18sp"
+                    android:gravity="center"
+                    android:layout_marginBottom="16dp"/>
+
+                <TextView
+                    android:id="@+id/alarmLevel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="16sp"
+                    android:gravity="center"
+                    android:textStyle="italic"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Admin Controls -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/adminControlsCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="📍 Τοποθεσία: ---"
-            android:textSize="16sp"
-            android:layout_marginBottom="8dp" />
-
-        <TextView
-            android:id="@+id/timestampText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="🕒 Ημερομηνία: ---"
-            android:textSize="14sp"
-            android:layout_marginBottom="8dp" />
-
-        <TextView
-            android:id="@+id/statusText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Κατάσταση: ---"
-            android:textSize="14sp"
-            android:layout_marginBottom="8dp" />
-
-        <TextView
-            android:id="@+id/commentsText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Σχόλια: ---"
-            android:textSize="14sp"
-            android:layout_marginBottom="12dp" />
-
-        <Button
-            android:id="@+id/viewPhotoButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Προβολή φωτογραφίας"
-            android:visibility="gone"
-            android:layout_marginBottom="16dp" />
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#DDDDDD"
-            android:layout_marginBottom="12dp" />
-
-        <!-- Admin actions -->
-        <LinearLayout
-            android:id="@+id/adminActionsContainer"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="4dp"
+            android:layout_marginBottom="16dp"
             android:visibility="gone">
 
-            <TextView
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Ενέργειες Admin"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="8dp" />
+                android:orientation="vertical"
+                android:padding="16dp">
 
-            <Button
-                android:id="@+id/approveButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Έγκριση περιστατικού"
-                android:layout_marginBottom="8dp" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Διαχείριση Admin"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="12dp"/>
 
-            <Button
-                android:id="@+id/rejectButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Απόρριψη περιστατικού"
-                android:layout_marginBottom="8dp" />
+                <CheckBox
+                    android:id="@+id/sendNotificationCheckbox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Αποστολή ειδοποίησης σε όλους τους χρήστες"
+                    android:layout_marginBottom="8dp"/>
 
-            <Button
-                android:id="@+id/notifyButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Ειδοποίηση χρηστών γύρω από το περιστατικό" />
-        </LinearLayout>
+                <EditText
+                    android:id="@+id/notificationMessage"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Μήνυμα ειδοποίησης (προαιρετικό)"
+                    android:layout_marginBottom="12dp"
+                    android:visibility="gone"/>
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:visibility="gone">
 
+                    <Spinner
+                        android:id="@+id/radiusSpinner"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Ακτίνα ειδοποίησης"/>
+                </com.google.android.material.textfield.TextInputLayout>
+                <Button
+                    android:id="@+id/sendNotificationButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Αποστολή Ειδοποιήσεων"
+                    android:enabled="false"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Progress Bar -->
         <ProgressBar
             android:id="@+id/progressBar"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:visibility="gone"
-            android:layout_marginTop="16dp"/>
+            android:layout_marginBottom="16dp"
+            android:visibility="gone"/>
+
+        <!-- Incidents List -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Λίστα Περιστατικών"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="12dp"/>
+
+        <LinearLayout
+            android:id="@+id/incidentsContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"/>
+
     </LinearLayout>
 </ScrollView>

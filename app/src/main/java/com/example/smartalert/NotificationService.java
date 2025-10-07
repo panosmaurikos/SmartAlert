@@ -13,7 +13,6 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.content.Intent;
 import androidx.core.content.ContextCompat;
-import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.firestore.FirebaseFirestore; // Προσθήκη
 import com.example.smartalert.data.repository.AuthRepositoryImpl; // Προσθήκη
 import com.example.smartalert.domain.repository.AuthRepository; // Προσθήκη
@@ -30,13 +29,14 @@ public class NotificationService extends FirebaseMessagingService {
         createNotificationChannel();
         // Δημιουργία του repository απευθείας στο Service
         this.authRepository = new AuthRepositoryImpl(); // Προσθήκη
-        getFCMToken();
+        // Αφαίρεση αυτής της γραμμής: getFCMToken();
     }
 
     // Αυτό αντικαθιστά το παλιό onTokenRefresh
     @Override
     public void onNewToken(String token) {
         Log.d(TAG, "Refreshed token: " + token);
+        // Αν υπάρχει συνδεδεμένος χρήστης, αποθήκευσε το νέο token
         saveTokenToFirestore(token);
     }
 
@@ -83,30 +83,14 @@ public class NotificationService extends FirebaseMessagingService {
         sendBroadcast(intent);
     }
 
-    private void getFCMToken() {
-        FirebaseMessaging.getInstance().getToken()
-                .addOnCompleteListener(task -> {
-                    if (!task.isSuccessful()) {
-                        Log.w(TAG, "Fetching FCM registration token failed", task.getException());
-                        return;
-                    }
-
-                    // Get new FCM registration token
-                    String token = task.getResult();
-                    Log.d(TAG, "FCM Token: " + token);
-                    saveTokenToFirestore(token);
-                });
-    }
-
     private void saveTokenToFirestore(String token) {
         String userId = getCurrentUserId();
         if (userId != null) {
-            // Χρήση του authRepository για την ενημέρωση
             authRepository.updateFCMToken(userId, token)
                     .addOnSuccessListener(aVoid -> Log.d(TAG, "Token saved successfully for user: " + userId))
                     .addOnFailureListener(e -> Log.e(TAG, "Failed to save token for user: " + userId, e));
         } else {
-            Log.w(TAG, "Cannot save token: userId is null");
+            Log.w(TAG, "Cannot save token: userId is null. Token will be saved on next login/register.");
         }
     }
 

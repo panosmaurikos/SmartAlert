@@ -14,6 +14,7 @@ import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.android.gms.tasks.Task;
+import com.google.firebase.messaging.FirebaseMessaging;
 public class AuthViewModel extends ViewModel {
     private static final String TAG = "AuthViewModel";
 
@@ -22,6 +23,7 @@ public class AuthViewModel extends ViewModel {
     private final MutableLiveData<String> errorLiveData = new MutableLiveData<>();
 
     private final FirebaseAuth firebaseAuth = FirebaseAuth.getInstance();
+    private final FirebaseMessaging firebaseMessaging = FirebaseMessaging.getInstance();
 
     public AuthViewModel() {
         FirebaseUser current = firebaseAuth.getCurrentUser();
@@ -39,6 +41,7 @@ public class AuthViewModel extends ViewModel {
                 FirebaseUser user = firebaseAuth.getCurrentUser();
                 Log.d(TAG, "login success uid=" + user.getUid());
                 userLiveData.setValue(user);
+                updateTokenForCurrentUser();
             } else {
                 String msg = "Authentication failed";
                 if (task.getException() != null) msg = task.getException().getMessage();
@@ -59,6 +62,7 @@ public class AuthViewModel extends ViewModel {
                     if (saveTask.isSuccessful()) {
                         Log.d(TAG, "saveUser success for uid=" + fbUser.getUid());
                         userLiveData.setValue(fbUser);
+                        updateTokenForCurrentUser();
                     } else {
                         String err = "Failed to save user: " + (saveTask.getException() != null ? saveTask.getException().getMessage() : "unknown");
                         Log.w(TAG, err);
@@ -82,5 +86,33 @@ public class AuthViewModel extends ViewModel {
     public Task<Void> updateFCMToken(String userId, String fcmToken) {
         Log.d(TAG, "updateFCMToken() called for user: " + userId);
         return authUseCase.updateFCMToken(userId, fcmToken);
+    }
+    private void updateTokenForCurrentUser() {
+        FirebaseUser currentUser = firebaseAuth.getCurrentUser();
+        if (currentUser != null) {
+            String userId = currentUser.getUid();
+            Log.d(TAG, "Attempting to fetch and update FCM token for user: " + userId);
+
+            firebaseMessaging.getToken()
+                    .addOnCompleteListener(task -> {
+                        if (!task.isSuccessful()) {
+                            Log.w(TAG, "Fetching FCM registration token failed", task.getException());
+                            return;
+                        }
+
+                        String token = task.getResult();
+                        if (token != null && !token.isEmpty()) {
+                            Log.d(TAG, "FCM Token retrieved: " + token);
+                            // Χρήση του updateFCMToken από τον UseCase
+                            Task<Void> updateTask = updateFCMToken(userId, token);
+                            updateTask.addOnSuccessListener(aVoid -> Log.d(TAG, "Token saved successfully for user: " + userId))
+                                    .addOnFailureListener(e -> Log.e(TAG, "Failed to save token for user: " + userId, e));
+                        } else {
+                            Log.w(TAG, "FCM token is null or empty, cannot save.");
+                        }
+                    });
+        } else {
+            Log.w(TAG, "updateTokenForCurrentUser: No user is currently logged in.");
+        }
     }
 }

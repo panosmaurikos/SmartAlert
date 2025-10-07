@@ -2,6 +2,7 @@ package com.example.smartalert.presentation.ui;
 
 import android.app.ProgressDialog;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.app.AlertDialog;
 import android.widget.*;
@@ -16,6 +17,22 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.QuerySnapshot;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.HashMap;
+import java.util.Map;
+import androidx.annotation.NonNull;
 
 public class IncidentDetailActivity extends AppCompatActivity {
     private String incidentType;
@@ -25,6 +42,9 @@ public class IncidentDetailActivity extends AppCompatActivity {
     private List<Incident> allIncidents = new ArrayList<>();
     private List<IncidentCluster> incidentClusters = new ArrayList<>();
 
+    // Προσθήκη της αρχικοποίησης του requestQueue
+    private RequestQueue requestQueue;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -32,6 +52,9 @@ public class IncidentDetailActivity extends AppCompatActivity {
 
         db = FirebaseFirestore.getInstance();
         progressBar = findViewById(R.id.progressBar);
+
+        // Αρχικοποίηση του requestQueue
+        requestQueue = Volley.newRequestQueue(this);
 
         incidentType = getIntent().getStringExtra("incidentType");
 
@@ -301,7 +324,7 @@ public class IncidentDetailActivity extends AppCompatActivity {
     private void rejectCluster(IncidentCluster cluster) {
         new AlertDialog.Builder(this)
                 .setTitle("Απόρριψη Συναγερμού")
-                .setMessage("Θέλετε να απορρίψετε αυτόν τον συναγερμό και όλες τις " + cluster.getTotalReports() + " αναφορές;")
+                .setMessage("Θέλετε να απορρίψετε αυτόν τον συναγερμού και όλες τις " + cluster.getTotalReports() + " αναφορές;")
                 .setPositiveButton("Απόρριψη", (dialog, which) -> {
                     List<String> ids = new ArrayList<>();
                     for (Incident incident : cluster.getIncidents()) {
@@ -335,13 +358,89 @@ public class IncidentDetailActivity extends AppCompatActivity {
         }
     }
 
+    // Ενημερωμένη μέθοδος sendNotificationToClusterUsers
     private void sendNotificationToClusterUsers(IncidentCluster cluster) {
-        // Εδώ βάλε πραγματικό notification logic (cloud function call). Demo:
         String msg = "Οδηγίες Πολιτικής Προστασίας για " + getTypeDisplayName(cluster.getType()) +
                 " στην περιοχή " + cluster.getMainLocation() + ". Αριθμός αναφορών: " + cluster.getTotalReports();
-        Toast.makeText(this, "Notification: " + msg, Toast.LENGTH_LONG).show();
 
+        // Βήμα 1: Εξαγωγή μοναδικών userIds από τα incidents της cluster
+        Set<String> userIdsSet = new HashSet<>();
+        for (Incident incident : cluster.getIncidents()) {
+            userIdsSet.add(incident.getUserId()); // Υποθέτουμε ότι το Incident έχει μέθοδο getUserId()
+        }
+        List<String> userIds = new ArrayList<>(userIdsSet);
+
+        if (userIds.isEmpty()) {
+            Toast.makeText(this, "Δεν βρέθηκαν χρήστες για ειδοποίηση.", Toast.LENGTH_SHORT).show();
+            Log.d("IncidentDetailActivity", "Δεν υπάρχουν userIds για να ανακτήσουμε tokens.");
+            return;
+        }
+
+        // Αντί να κάνουμε query για tokens εδώ, στέλνουμε τα userIds στον server
+        Log.d("IncidentDetailActivity", "Βρέθηκαν " + userIds.size() + " μοναδικοί χρήστες. Αποστολή στον server.");
+        sendAlertToServer(userIds, "Ενημέρωση Συναγερμού", msg, cluster.getType());
     }
+
+    // Νέα μέθοδος για να στέλνει το request στον Node.js server
+    private void sendAlertToServer(List<String> userIds, String title, String message, String incidentType) {
+        String serverUrl = "http://10.0.2.2:3000/sendAlert"; // Ή η πραγματική διεύθυνση του server σου
+
+        JSONObject jsonBody = new JSONObject();
+        try {
+            jsonBody.put("title", title);
+            jsonBody.put("message", message);
+            jsonBody.put("incidentType", incidentType);
+            jsonBody.put("userIds", new JSONArray(userIds)); // Στέλνουμε τη λίστα με τα userIds
+        } catch (JSONException e) {
+            Log.e("IncidentDetailActivity", "Σφάλμα δημιουργίας JSON body για server request", e);
+            Toast.makeText(this, "Σφάλμα ετοιμασίας αιτήματος.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        JsonObjectRequest request = new JsonObjectRequest(Request.Method.POST, serverUrl, jsonBody,
+                response -> {
+                    Log.d("IncidentDetailActivity", "Απάντηση από τον server: " + response.toString());
+                    // Ο server θα επιστρέψει ένα JSON με success: true/false
+                    try {
+                        boolean success = response.getBoolean("success");
+                        if (success) {
+                            Toast.makeText(this, "Ειδοποίηση απεστάλη στους χρήστες!", Toast.LENGTH_LONG).show();
+                        } else {
+                            String errorMsg = response.getString("error");
+                            Toast.makeText(this, "Αποτυχία από τον server: " + errorMsg, Toast.LENGTH_LONG).show();
+                        }
+                    } catch (JSONException e) {
+                        Log.e("IncidentDetailActivity", "Σφάλμα ανάλυσης απάντησης server", e);
+                        Toast.makeText(this, "Άγνωστο σφάλμα από τον server.", Toast.LENGTH_LONG).show();
+                    }
+                },
+                error -> {
+                    Log.e("IncidentDetailActivity", "Σφάλμα αποστολής στον server: ", error);
+                    if (error.networkResponse != null) {
+                        Log.e("IncidentDetailActivity", "HTTP Status Code: " + error.networkResponse.statusCode);
+                        Log.e("IncidentDetailActivity", "Error Data: " + new String(error.networkResponse.data));
+                    }
+                    Toast.makeText(this, "Σφάλμα αποστολής ειδοποίησης: " + error.getMessage(), Toast.LENGTH_LONG).show();
+                }) {
+            @Override
+            public Map<String, String> getHeaders() {
+                Map<String, String> headers = new HashMap<>();
+                headers.put("Content-Type", "application/json");
+                // Αν ο server σου απαιτεί κάποια εξουσιοδότηση (π.χ., API key), βάλε την εδώ
+                // headers.put("Authorization", "Bearer YOUR_API_TOKEN_HERE");
+                return headers;
+            }
+        };
+        requestQueue.add(request);
+    }
+
+    // Πλέον δεν χρειαζόμαστε την παλιά sendFCMNotifications με τον παλιό τρόπο
+    // Μπορείς να την διαγράψεις ή να την σχολιάσεις
+    /*
+    private void sendFCMNotifications(List<String> tokens, String messageBody) {
+        // ... (παλιός κώδικας που δεν λειτουργεί)
+    }
+    */
 
     private void showClusterDetails(IncidentCluster cluster) {
         StringBuilder details = new StringBuilder();

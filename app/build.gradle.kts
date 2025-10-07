@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     id("com.google.gms.google-services")
+
 }
 
 android {
@@ -61,6 +62,7 @@ dependencies {
     implementation("androidx.compose.material3:material3-adaptive-navigation-suite:1.5.0-alpha04")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     implementation("com.google.android.material:material:1.12.0")
+    implementation("com.google.firebase:firebase-messaging:25.0.1")
     implementation ("com.google.android.gms:play-services-location:21.0.1")
     val camerax_version = "1.5.0"
     implementation("androidx.camera:camera-core:${camerax_version}")

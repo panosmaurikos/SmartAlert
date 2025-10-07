@@ -13,7 +13,7 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-
+import com.google.android.gms.tasks.Task;
 public class AuthViewModel extends ViewModel {
     private static final String TAG = "AuthViewModel";
 
@@ -78,5 +78,9 @@ public class AuthViewModel extends ViewModel {
         Log.d(TAG, "logout()");
         firebaseAuth.signOut();
         userLiveData.setValue(null);
+    }
+    public Task<Void> updateFCMToken(String userId, String fcmToken) {
+        Log.d(TAG, "updateFCMToken() called for user: " + userId);
+        return authUseCase.updateFCMToken(userId, fcmToken);
     }
 }

@@ -1,6 +1,7 @@
 package com.example.smartalert.domain.model;
 
 import java.util.Date;
+import com.google.firebase.Timestamp;
 
 public class Incident {
     private String id;
@@ -9,7 +10,7 @@ public class Incident {
     private String comments;
     private double latitude;
     private double longitude;
-    private Date timestamp;
+    private Object  timestamp;
     private String photoUrl;
     private String status;
     private String location;
@@ -43,8 +44,18 @@ public class Incident {
     public void setLatitude(double latitude) { this.latitude = latitude; }
     public double getLongitude() { return longitude; }
     public void setLongitude(double longitude) { this.longitude = longitude; }
-    public Date getTimestamp() { return timestamp; }
-    public void setTimestamp(Date timestamp) { this.timestamp = timestamp; }
+    public Date getTimestamp() {
+        if (timestamp instanceof Timestamp) {
+            return ((Timestamp) timestamp).toDate();
+        } else if (timestamp instanceof Date) {
+            return (Date) timestamp;
+        }
+        return new Date();
+    }
+
+    public void setTimestamp(Date timestamp) {
+        this.timestamp = timestamp;
+    }
     public String getPhotoUrl() { return photoUrl; }
     public void setPhotoUrl(String photoUrl) { this.photoUrl = photoUrl; }
     public String getStatus() { return status; }

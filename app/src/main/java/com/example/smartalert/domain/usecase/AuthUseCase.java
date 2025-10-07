@@ -4,6 +4,7 @@ import com.example.smartalert.domain.model.User;
 import com.example.smartalert.domain.repository.AuthRepository;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.firebase.auth.AuthResult;
+import com.google.android.gms.tasks.Task;
 
 public class AuthUseCase {
     private AuthRepository repository;
@@ -22,5 +23,8 @@ public class AuthUseCase {
 
     public void saveUser(User user, OnCompleteListener<Void> listener) {
         repository.saveUser(user, listener);
+    }
+    public Task<Void> updateFCMToken(String userId, String fcmToken) {
+        return repository.updateFCMToken(userId, fcmToken);
     }
 }

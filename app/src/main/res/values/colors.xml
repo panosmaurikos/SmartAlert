@@ -7,5 +7,6 @@
     <color name="teal_200">#03DAC5</color>
     <color name="grey_600">#757575</color><color name="primaryColor">#6200EE</color>
     <color name="secondaryColor">#03DAC5</color>
-
+    <color name="card_background">#FFFFFF</color>
+    <color name="separator">#E0E0E0</color>
 </resources>

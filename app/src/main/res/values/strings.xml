@@ -80,6 +80,90 @@
     <string name="no_data">No data available</string>
     <string name="error_occurred">Error: %s</string>
     <string name="incidents_count">%d incidents</string>
+    <string name="back">Back</string>
 
+    <!-- Admin section -->
+    <string name="admin_management">Admin Management</string>
+    <string name="send_notification_to_all_users">Send notification to all users</string>
+    <string name="notification_message_optional">Notification message</string>
+    <string name="notification_radius">Notification radius</string>
+    <string name="send_notifications">Send Notifications</string>
+    <string name="incidents_list">Incidents List</string>
+    <string name="civil_protection_instructions">Civil Protection Instructions for</string>
+    <string name="in_area">in area</string>
+    <string name="number_of_reports">Number of reports</string>
+    <string name="alert_update">Alert Update</string>
+    <string name="request_preparation_error">Request preparation error</string>
+    <string name="user">User</string>
+    <string name="location">Location</string>
+    <string name="time">Time</string>
 
+    <!-- Incident Detail Activity -->
+    <string name="loading">Loading...</string>
+    <string name="alarm_level_calculating">Alarm Level: Calculating...</string>
+    <string name="server_error">Server Error</string>
+    <string name="data_parsing_error">Data parsing error</string>
+    <string name="connection_error">Connection error</string>
+    <string name="incident_loading_error">Error loading incidents</string>
+    <string name="no_alerts_found">No alerts found for type: %s</string>
+    <string name="total_alerts">Total: %d alerts, %d reports</string>
+    <string name="alarm_level">Alarm Level: %.1f/100 (%s)</string>
+    <string name="alert_header">ALERT - %s</string>
+    <string name="severity_level">Severity Level:</string>
+    <string name="unique_users">Unique Users:</string>
+    <string name="people">people</string>
+    <string name="total_reports">Total Reports:</string>
+    <string name="reports">reports</string>
+    <string name="main_location">Main Location:</string>
+    <string name="time_frame">Time Frame:</string>
+    <string name="unknown_location">Unknown location</string>
+    <string name="unknown">Unknown</string>
+    <string name="unknown_type">Unknown type</string>
+
+    <!-- Admin Buttons -->
+    <string name="approve_cluster">Approve Group</string>
+    <string name="reject_cluster">Reject Group</string>
+    <string name="notify_users">Notify Users</string>
+    <string name="incident_details">Report Details</string>
+
+    <!-- Admin Dialogs -->
+    <string name="approving_cluster">Approving incident group...</string>
+    <string name="reject_alert_title">Reject Alert</string>
+    <string name="reject_alert_message">Do you want to reject this alert and all %d reports?</string>
+    <string name="reject">Reject</string>
+    <string name="cancel">Cancel</string>
+    <string name="completed_for_reports">Completed for %d reports</string>
+    <string name="update_error">Update error: %s</string>
+
+    <!-- Notifications -->
+    <string name="no_users_found">No users found for notification.</string>
+    <string name="users_found">Found %d unique users. Sending to server.</string>
+    <string name="notification_sent">Notification sent to users!</string>
+    <string name="server_failure">Server failure: %s</string>
+    <string name="unknown_server_error">Unknown server error.</string>
+    <string name="notification_send_error">Error sending notification: %s</string>
+    <string name="alert_details">Alert Details</string>
+    <string name="close">Close</string>
+
+    <string name="delete_incidents">Delete Incidents</string>
+    <string name="delete_incidents_title">Delete Incidents</string>
+    <string name="delete_incidents_message">Do you want to delete %d incidents? This action cannot be undone.</string>
+    <string name="delete">Delete</string>
+    <string name="deleting_incidents">Deleting incidents...</string>
+    <string name="delete_error">Deletion error</string>
+
+    <!-- Strings for approval notifications -->
+    <string name="incident_approved">Incident Approved</string>
+    <string name="your_incident_approved">Your incident for %s has been approved</string>
+    <string name="incident_rejected">Incident Rejected</string>
+    <string name="your_incident_rejected">Your incident for %s has been rejected</string>
+    <string name="incident_status_update">Status Update</string>
+    <string name="incident_status_changed">The status of your incident for %s has changed</string>
+
+    <!-- Incident Types -->
+    <string name="fire">Fire</string>
+    <string name="flood">Flood</string>
+    <string name="earthquake">Earthquake</string>
+    <string name="storm">Storm</string>
+    <string name="other">Other</string>
 </resources>

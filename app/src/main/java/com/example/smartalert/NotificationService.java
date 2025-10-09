@@ -13,30 +13,29 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.content.Intent;
 import androidx.core.content.ContextCompat;
-import com.google.firebase.firestore.FirebaseFirestore; // Προσθήκη
-import com.example.smartalert.data.repository.AuthRepositoryImpl; // Προσθήκη
-import com.example.smartalert.domain.repository.AuthRepository; // Προσθήκη
+import com.google.firebase.firestore.FirebaseFirestore; // Added
+import com.example.smartalert.data.repository.AuthRepositoryImpl; // Added
+import com.example.smartalert.domain.repository.AuthRepository; // Added
 
 public class NotificationService extends FirebaseMessagingService {
     private static final String TAG = "NotificationService";
     private static final String CHANNEL_ID = "emergency_alerts";
     private static final String CHANNEL_NAME = "Emergency Alerts";
-    private AuthRepository authRepository; // Προσθήκη
+    private AuthRepository authRepository;
 
     @Override
     public void onCreate() {
         super.onCreate();
         createNotificationChannel();
-        // Δημιουργία του repository απευθείας στο Service
-        this.authRepository = new AuthRepositoryImpl(); // Προσθήκη
-        // Αφαίρεση αυτής της γραμμής: getFCMToken();
+
+        this.authRepository = new AuthRepositoryImpl();
+
     }
 
-    // Αυτό αντικαθιστά το παλιό onTokenRefresh
+    // This replaces the old onTokenRefresh
     @Override
     public void onNewToken(String token) {
         Log.d(TAG, "Refreshed token: " + token);
-        // Αν υπάρχει συνδεδεμένος χρήστης, αποθήκευσε το νέο token
         saveTokenToFirestore(token);
     }
 
@@ -44,7 +43,6 @@ public class NotificationService extends FirebaseMessagingService {
     public void onMessageReceived(RemoteMessage remoteMessage) {
         Log.d(TAG, "Received notification from: " + remoteMessage.getFrom());
 
-        // Check if message contains a data payload
         if (remoteMessage.getData().size() > 0) {
             Log.d(TAG, "Message data payload: " + remoteMessage.getData());
 
@@ -54,11 +52,9 @@ public class NotificationService extends FirebaseMessagingService {
             String latitude = remoteMessage.getData().get("latitude");
             String longitude = remoteMessage.getData().get("longitude");
 
-            // Handle message within 10 seconds
             handleMessageNow(title, message, incidentType);
         }
 
-        // Check if message contains a notification payload
         if (remoteMessage.getNotification() != null) {
             Log.d(TAG, "Message Notification Body: " + remoteMessage.getNotification().getBody());
             String title = remoteMessage.getNotification().getTitle();
@@ -68,10 +64,8 @@ public class NotificationService extends FirebaseMessagingService {
     }
 
     private void handleMessageNow(String title, String message, String incidentType) {
-        // Εμφάνιση notification
         showNotification(title, message, incidentType);
 
-        // Broadcast to activities
         broadcastNotificationToActivity(title, message, incidentType);
     }
 
@@ -121,39 +115,39 @@ public class NotificationService extends FirebaseMessagingService {
     }
 
     private void showNotification(String title, String message, String incidentType) {
-        // Ελέγχουμε πρώτα την άδεια
+        // First, we check for permission
         if (!hasNotificationPermission()) {
             Log.w(TAG, "Notification permission not granted");
-            return; // Αν δεν υπάρχει άδεια, δεν προχωράμε
+            return; // If there is no permission, we don't proceed
         }
 
-        // Χρήση default εικονιδίου (ή του εικονιδίου της εφαρμογής, όπως είχες)
-        int smallIcon = getApplicationInfo().icon; // Αυτό είναι πάντα διαθέσιμο
+        // Use the default icon (or the app icon, as you had)
+        int smallIcon = getApplicationInfo().icon; // This is always available
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setSmallIcon(smallIcon)
-                .setContentTitle(title != null ? title : "Ειδοποίηση Επείγοντος")
+                .setContentTitle(title != null ? title : "Emergency Alert")
                 .setContentText(message)
-                .setStyle(new NotificationCompat.BigTextStyle().bigText(message)) // Πρόσθεσε αυτό για μεγαλύτερο κείμενο
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(message)) // Added this for longer text
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true)
-                .setVibrate(new long[]{0, 1000, 500, 1000}) // Πρόσθεσε αυτό αν θέλεις δόνηση
-                .setLights(0xFFF44336, 1000, 1000); // Πρόσθεσε αυτό για φλας στο LED
+                .setVibrate(new long[]{0, 1000, 500, 1000}) // Added this if you want vibration
+                .setLights(0xFFF44336, 1000, 1000); // Added this for LED flash
 
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
 
-        // Παίρνουμε το ID για την ειδοποίηση
+        // We get the ID for the notification
         int notificationId = (int) System.currentTimeMillis();
 
-        // Περικύκλωση της notify() με try-catch για να αντιμετωπιστεί πιθανή SecurityException
+        // Wrap notify() with a try-catch to handle a potential SecurityException
         try {
             notificationManager.notify(notificationId, builder.build());
             Log.d(TAG, "Notification displayed successfully with ID: " + notificationId);
         } catch (SecurityException e) {
-            // Αυτό το catch θα πιάσει την εξαίρεση αν, παρά τον έλεγχο, δεν υπάρχει άδεια
+            // This catch will catch the exception if, despite the check, permission is not granted
             Log.e(TAG, "SecurityException when notifying: ", e);
         } catch (Exception e) {
-            // Κάλυψε και άλλες πιθανές εξαιρέσεις
+            // Cover other possible exceptions as well
             Log.e(TAG, "Error showing notification: ", e);
         }
     }

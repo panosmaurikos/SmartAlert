@@ -3,6 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/background"
     android:padding="16dp">
 
     <LinearLayout
@@ -14,9 +15,10 @@
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            app:cardBackgroundColor="?attr/colorSurface"
             app:cardCornerRadius="12dp"
             app:cardElevation="4dp"
-            android:layout_marginBottom="16dp">
+            android:layout_marginTop="48dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -30,6 +32,7 @@
                     android:layout_height="wrap_content"
                     android:textSize="24sp"
                     android:textStyle="bold"
+                    android:textColor="?attr/colorOnSurface"
                     android:gravity="center"
                     android:layout_marginBottom="8dp"/>
 
@@ -38,6 +41,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:textSize="18sp"
+                    android:textColor="?attr/colorOnSurface"
                     android:gravity="center"
                     android:layout_marginBottom="16dp"/>
 
@@ -46,67 +50,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:textSize="16sp"
+                    android:textColor="?attr/colorOnSurface"
                     android:gravity="center"
                     android:textStyle="italic"/>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- Admin Controls -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/adminControlsCard"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="4dp"
-            android:layout_marginBottom="16dp"
-            android:visibility="gone">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Διαχείριση Admin"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    android:layout_marginBottom="12dp"/>
-
-                <CheckBox
-                    android:id="@+id/sendNotificationCheckbox"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Αποστολή ειδοποίησης σε όλους τους χρήστες"
-                    android:layout_marginBottom="8dp"/>
-
-                <EditText
-                    android:id="@+id/notificationMessage"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="Μήνυμα ειδοποίησης (προαιρετικό)"
-                    android:layout_marginBottom="12dp"
-                    android:visibility="gone"/>
-                <com.google.android.material.textfield.TextInputLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
-                    android:visibility="gone">
-
-                    <Spinner
-                        android:id="@+id/radiusSpinner"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:hint="Ακτίνα ειδοποίησης"/>
-                </com.google.android.material.textfield.TextInputLayout>
-                <Button
-                    android:id="@+id/sendNotificationButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Αποστολή Ειδοποιήσεων"
-                    android:enabled="false"/>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -119,20 +65,30 @@
             android:layout_marginBottom="16dp"
             android:visibility="gone"/>
 
-        <!-- Incidents List -->
+        <!-- Incidents List Header -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Λίστα Περιστατικών"
+            android:text="@string/incidents_list"
             android:textSize="20sp"
             android:textStyle="bold"
+            android:textColor="?attr/colorOnBackground"
             android:layout_marginBottom="12dp"/>
 
+        <!-- Clusters Container -->
         <LinearLayout
             android:id="@+id/incidentsContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"/>
+        <Button
+            android:id="@+id/backButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/back"
+            android:layout_marginBottom="16dp"
+            android:drawablePadding="8dp"
+            style="@style/Widget.Material3.Button.TextButton" />
 
     </LinearLayout>
 </ScrollView>

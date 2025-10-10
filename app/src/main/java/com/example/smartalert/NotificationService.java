@@ -13,30 +13,26 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.content.Intent;
 import androidx.core.content.ContextCompat;
-import com.google.firebase.firestore.FirebaseFirestore; // Προσθήκη
-import com.example.smartalert.data.repository.AuthRepositoryImpl; // Προσθήκη
-import com.example.smartalert.domain.repository.AuthRepository; // Προσθήκη
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.example.smartalert.data.repository.AuthRepositoryImpl;
+import com.example.smartalert.domain.repository.AuthRepository;
 
 public class NotificationService extends FirebaseMessagingService {
     private static final String TAG = "NotificationService";
     private static final String CHANNEL_ID = "emergency_alerts";
     private static final String CHANNEL_NAME = "Emergency Alerts";
-    private AuthRepository authRepository; // Προσθήκη
+    private AuthRepository authRepository;
 
     @Override
     public void onCreate() {
         super.onCreate();
         createNotificationChannel();
-        // Δημιουργία του repository απευθείας στο Service
-        this.authRepository = new AuthRepositoryImpl(); // Προσθήκη
-        // Αφαίρεση αυτής της γραμμής: getFCMToken();
+        this.authRepository = new AuthRepositoryImpl();
     }
 
-    // Αυτό αντικαθιστά το παλιό onTokenRefresh
     @Override
     public void onNewToken(String token) {
         Log.d(TAG, "Refreshed token: " + token);
-        // Αν υπάρχει συνδεδεμένος χρήστης, αποθήκευσε το νέο token
         saveTokenToFirestore(token);
     }
 
@@ -44,21 +40,25 @@ public class NotificationService extends FirebaseMessagingService {
     public void onMessageReceived(RemoteMessage remoteMessage) {
         Log.d(TAG, "Received notification from: " + remoteMessage.getFrom());
 
-        // Check if message contains a data payload
+        // First check if there is approval status in data payload
         if (remoteMessage.getData().size() > 0) {
             Log.d(TAG, "Message data payload: " + remoteMessage.getData());
 
-            String title = remoteMessage.getData().get("title");
-            String message = remoteMessage.getData().get("message");
+            String approvalStatus = remoteMessage.getData().get("approvalStatus");
             String incidentType = remoteMessage.getData().get("incidentType");
-            String latitude = remoteMessage.getData().get("latitude");
-            String longitude = remoteMessage.getData().get("longitude");
+            String message = remoteMessage.getData().get("message");
 
-            // Handle message within 10 seconds
+            // If approval status exists, show appropriate message
+            if (approvalStatus != null) {
+                handleApprovalNotification(approvalStatus, incidentType, message);
+                return;
+            }
+
+            // Regular notifications
+            String title = remoteMessage.getData().get("title");
             handleMessageNow(title, message, incidentType);
         }
 
-        // Check if message contains a notification payload
         if (remoteMessage.getNotification() != null) {
             Log.d(TAG, "Message Notification Body: " + remoteMessage.getNotification().getBody());
             String title = remoteMessage.getNotification().getTitle();
@@ -67,15 +67,35 @@ public class NotificationService extends FirebaseMessagingService {
         }
     }
 
-    private void handleMessageNow(String title, String message, String incidentType) {
-        // Εμφάνιση notification
-        showNotification(title, message, incidentType);
+    private void handleApprovalNotification(String approvalStatus, String incidentType, String message) {
+        String title;
+        String notificationMessage;
 
-        // Broadcast to activities
+        if ("approved".equals(approvalStatus)) {
+            title = "Approved Incident";
+            notificationMessage = message != null ? message :
+                    "Your incident for " + getTypeDisplayName(incidentType) + " has been approved";
+        } else if ("rejected".equals(approvalStatus)) {
+            title = "Rejected Incident";
+            notificationMessage = message != null ? message :
+                    "Your incident for " + getTypeDisplayName(incidentType) + " has been rejected";
+        } else {
+            title = "Status Update";
+            notificationMessage = message != null ? message :
+                    "The status of your incident for " + getTypeDisplayName(incidentType) + " has changed";
+        }
+
+        showNotification(title, notificationMessage, incidentType);
+        broadcastNotificationToActivity(title, notificationMessage, incidentType);
+    }
+
+    private void handleMessageNow(String title, String message, String incidentType) {
+        showNotification(title, message, incidentType);
         broadcastNotificationToActivity(title, message, incidentType);
     }
 
     private void broadcastNotificationToActivity(String title, String message, String incidentType) {
+        // Broadcast notification to activities for real-time updates
         Intent intent = new Intent("NEW_EMERGENCY_NOTIFICATION");
         intent.putExtra("title", title);
         intent.putExtra("message", message);
@@ -84,6 +104,7 @@ public class NotificationService extends FirebaseMessagingService {
     }
 
     private void saveTokenToFirestore(String token) {
+        // Save FCM token to Firestore for push notifications
         String userId = getCurrentUserId();
         if (userId != null) {
             authRepository.updateFCMToken(userId, token)
@@ -95,6 +116,7 @@ public class NotificationService extends FirebaseMessagingService {
     }
 
     private String getCurrentUserId() {
+        // Get current user ID from Firebase Auth
         if (FirebaseAuth.getInstance().getCurrentUser() != null) {
             return FirebaseAuth.getInstance().getCurrentUser().getUid();
         }
@@ -102,6 +124,7 @@ public class NotificationService extends FirebaseMessagingService {
     }
 
     private void createNotificationChannel() {
+        // Create notification channel for Android O and above
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
                     CHANNEL_ID,
@@ -121,48 +144,57 @@ public class NotificationService extends FirebaseMessagingService {
     }
 
     private void showNotification(String title, String message, String incidentType) {
-        // Ελέγχουμε πρώτα την άδεια
+        // Check if app has notification permission
         if (!hasNotificationPermission()) {
             Log.w(TAG, "Notification permission not granted");
-            return; // Αν δεν υπάρχει άδεια, δεν προχωράμε
+            return;
         }
 
-        // Χρήση default εικονιδίου (ή του εικονιδίου της εφαρμογής, όπως είχες)
-        int smallIcon = getApplicationInfo().icon; // Αυτό είναι πάντα διαθέσιμο
+        int smallIcon = getApplicationInfo().icon;
 
+        // Build notification with high priority
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setSmallIcon(smallIcon)
-                .setContentTitle(title != null ? title : "Ειδοποίηση Επείγοντος")
+                .setContentTitle(title != null ? title : "Emergency Alert")
                 .setContentText(message)
-                .setStyle(new NotificationCompat.BigTextStyle().bigText(message)) // Πρόσθεσε αυτό για μεγαλύτερο κείμενο
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(message))
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true)
-                .setVibrate(new long[]{0, 1000, 500, 1000}) // Πρόσθεσε αυτό αν θέλεις δόνηση
-                .setLights(0xFFF44336, 1000, 1000); // Πρόσθεσε αυτό για φλας στο LED
+                .setVibrate(new long[]{0, 1000, 500, 1000})
+                .setLights(0xFFF44336, 1000, 1000);
 
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
-
-        // Παίρνουμε το ID για την ειδοποίηση
         int notificationId = (int) System.currentTimeMillis();
 
-        // Περικύκλωση της notify() με try-catch για να αντιμετωπιστεί πιθανή SecurityException
         try {
             notificationManager.notify(notificationId, builder.build());
             Log.d(TAG, "Notification displayed successfully with ID: " + notificationId);
         } catch (SecurityException e) {
-            // Αυτό το catch θα πιάσει την εξαίρεση αν, παρά τον έλεγχο, δεν υπάρχει άδεια
             Log.e(TAG, "SecurityException when notifying: ", e);
         } catch (Exception e) {
-            // Κάλυψε και άλλες πιθανές εξαιρέσεις
             Log.e(TAG, "Error showing notification: ", e);
         }
     }
 
     private boolean hasNotificationPermission() {
+        // Check notification permission for Android 13 and above
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             return ContextCompat.checkSelfPermission(this,
                     android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
         }
         return true;
+    }
+
+    private String getTypeDisplayName(String typeKey) {
+        // Convert incident type key to display name
+        if (typeKey == null) return "Unknown Type";
+        switch (typeKey) {
+            case "fire": return "Fire";
+            case "flood": return "Flood";
+            case "earthquake": return "Earthquake";
+            case "storm": return "Storm";
+            case "other": return "Other";
+            default: return typeKey;
+        }
     }
 }

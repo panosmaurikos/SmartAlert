@@ -6,13 +6,22 @@
     import com.google.android.gms.tasks.OnCompleteListener;
     import com.google.firebase.firestore.QuerySnapshot;
 
-    public class IncidentRepositoryImpl implements IncidentRepository {
-        private IncidentRemoteDataSource remoteDataSource;
+    /**
+     * Serves as the main data access point for incident related operations
+     * Delegates actual data operations to the remote data source
+     */
 
+    public class IncidentRepositoryImpl implements IncidentRepository {
+        // Reference to the remote data source that handles Firebase communication
+        private IncidentRemoteDataSource remoteDataSource;
+        /**
+         * Constructor initializes the remote data source
+         * Creates a new instance of IncidentRemoteDataSource for database operations
+         */
         public IncidentRepositoryImpl() {
             remoteDataSource = new IncidentRemoteDataSource();
         }
-
+        // Submits a new incident to the database
         @Override
         public void submitIncident(Incident incident, OnCompleteListener<Void> listener) {
             remoteDataSource.submitIncident(incident, listener);

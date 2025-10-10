@@ -41,15 +41,15 @@ public class IncidentViewModel extends AndroidViewModel {
         submitIncidentUseCase = new SubmitIncidentUseCase(repository);
         this.geocoder = new Geocoder(application.getApplicationContext(), Locale.getDefault());
     }
-
+    // LiveData getters for submit result
     public LiveData<Boolean> getSubmitResult() {
         return submitResult;
     }
-
+    // LiveData getters for error messages
     public LiveData<String> getErrorMessage() {
         return errorMessage;
     }
-
+    // Submit incident method with location name
     public void submitIncident(String type, String comments, double latitude, double longitude, String photoUrl) {
         String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
         String incidentId = UUID.randomUUID().toString();
@@ -57,7 +57,7 @@ public class IncidentViewModel extends AndroidViewModel {
         Incident incident = new Incident(userId, type, comments, latitude, longitude, new Date(), photoUrl);
         incident.setId(incidentId);
 
-        // Υπολογισμός location name με Geocoder
+        // Calculate location name with Geocoder
         String locationName = getLocationName(latitude, longitude);
         incident.setLocation(locationName);
 
@@ -65,7 +65,7 @@ public class IncidentViewModel extends AndroidViewModel {
         System.out.println("Submitting incident: " + incidentId);
         System.out.println("Type: " + type);
         System.out.println("Location: " + latitude + ", " + longitude);
-        System.out.println("Location Name: " + locationName); // <-- Προσθήκη
+        System.out.println("Location Name: " + locationName);
         System.out.println("Photo URL: " + photoUrl);
 
         submitIncidentUseCase.execute(incident, task -> {
@@ -79,13 +79,13 @@ public class IncidentViewModel extends AndroidViewModel {
             }
         });
     }
-
+    // Helper method to get location name from coordinates
     private String getLocationName(double latitude, double longitude) {
         try {
             List<Address> addresses = geocoder.getFromLocation(latitude, longitude, 1);
             if (addresses != null && !addresses.isEmpty()) {
                 Address address = addresses.get(0);
-                // Κατασκευή του ονόματος τοποθεσίας (π.χ. "Mountain View, Ηνωμένες Πολιτείες")
+                // Constructing the location name
                 StringBuilder sb = new StringBuilder();
                 if (address.getLocality() != null) {
                     sb.append(address.getLocality()).append(", ");
@@ -101,7 +101,7 @@ public class IncidentViewModel extends AndroidViewModel {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        // Αν αποτύχει, επιστρέφουμε τις συντεταγμένες ως fallback
+        // If it fails, we return the coordinates as a fallback
         return String.format(Locale.getDefault(), "%.2f, %.2f", latitude, longitude);
     }
 }

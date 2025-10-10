@@ -20,9 +20,26 @@
         <!-- Common -->
         <string name="error_email_required">Συμπλήρωσε email</string>
         <string name="error_password_required">Συμπλήρωσε κωδικό</string>
+        <string name="delete_incidents">Διαγραφή Περιστατικών</string>
+        <string name="delete_incidents_title">Διαγραφή Περιστατικών</string>
+        <string name="delete_incidents_message">Θέλετε να διαγράψετε %d περιστατικά; Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.</string>
+        <string name="delete">Διαγραφή</string>
+        <string name="deleting_incidents">Διαγραφή περιστατικών...</string>
+        <string name="delete_error">Σφάλμα διαγραφής</string>
+        <string name="incidents_count">%d περιστατικά</string>
+        <string name="unknown_date">Άγνωστη ημερομηνία</string>
+        <string name="more_incidents">+ %1$d περιστατικά</string>
+        <string name="incident_info">📍 %1$s\n📅 %2$s</string>
+
+        <!-- Συμβολοσειρές για ειδοποιήσεις approval -->
+        <string name="incident_approved">Εγκεκριμένο Περιστατικό</string>
+        <string name="your_incident_approved">Το περιστατικό σας για %s έχει εγκριθεί</string>
+        <string name="incident_rejected">Απορριφθέν Περιστατικό</string>
+        <string name="your_incident_rejected">Το περιστατικό σας για %s έχει απορριφθεί</string>
+        <string name="incident_status_update">Ενημέρωση Κατάστασης</string>
+        <string name="incident_status_changed">Η κατάσταση του περιστατικού σας για %s έχει αλλάξει</string>
 
         <!-- Report Incident Activity -->
-        <string name="comments">Σχόλια</string>
         <string name="photo_optional">Φωτογραφία</string>
         <string name="take_photo">Λήψη Φωτογραφίας</string>
         <string name="submit_incident">Υποβολή Συμβάντος</string>
@@ -75,4 +92,74 @@
         <string name="all">Όλα</string>
         <string name="no_data">Δεν υπάρχουν δεδομένα</string>
         <string name="error_occurred">Σφάλμα: %s</string>
+        <!-- Admin section -->
+        <string name="admin_management">Διαχείριση Admin</string>
+        <string name="send_notification_to_all_users">Αποστολή ειδοποίησης σε όλους τους χρήστες</string>
+        <string name="notification_message_optional">Μήνυμα ειδοποίησης</string>
+        <string name="notification_radius">Ακτίνα ειδοποίησης</string>
+        <string name="send_notifications">Αποστολή Ειδοποιήσεων</string>
+        <string name="incidents_list">Λίστα Περιστατικών</string>
+        <!-- Ελληνικά -->
+        <string name="civil_protection_instructions">Οδηγίες Πολιτικής Προστασίας για</string>
+        <string name="in_area">στην περιοχή</string>
+        <string name="number_of_reports">Αριθμός αναφορών</string>
+        <string name="alert_update">Ενημέρωση Συναγερμού</string>
+        <string name="request_preparation_error">Σφάλμα ετοιμασίας αιτήματος</string>
+        <string name="user">Χρήστης</string>
+        <string name="location">Τοποθεσία</string>
+        <string name="time">Χρόνος</string>
+        <string name="comments">Σχόλια</string>
+        <string name="back">Πίσω</string>
+
+        <!-- Incident Detail Activity -->
+        <string name="loading">Φόρτωση...</string>
+        <string name="alarm_level_calculating">Επίπεδο Συναγερμού: Υπολογισμός...</string>
+        <string name="server_error">Σφάλμα Server</string>
+        <string name="data_parsing_error">Σφάλμα ανάλυσης δεδομένων</string>
+        <string name="connection_error">Σφάλμα σύνδεσης</string>
+        <string name="incident_loading_error">Σφάλμα φόρτωσης περιστατικών</string>
+        <string name="no_alerts_found">Δεν βρέθηκαν συναγερμοί για τον τύπο: %s</string>
+        <string name="total_alerts">Σύνολο: %d συναγερμοί, %d αναφορές</string>
+        <string name="alarm_level">Επίπεδο Συναγερμού: %.1f/100 (%s)</string>
+        <string name="alert_header">ΣΥΝΑΓΕΡΜΟΣ - %s</string>
+        <string name="severity_level">Επίπεδο Βαρύτητας:</string>
+        <string name="unique_users">Μοναδικοί Χρήστες:</string>
+        <string name="people">άτομα</string>
+        <string name="total_reports">Συνολικές Αναφορές:</string>
+        <string name="reports">αναφορές</string>
+        <string name="main_location">Κύρια Τοποθεσία:</string>
+        <string name="time_frame">Χρονικό Πλαίσιο:</string>
+        <string name="unknown_location">Άγνωστη τοποθεσία</string>
+        <string name="unknown">Άγνωστο</string>
+        <string name="unknown_type">Άγνωστος τύπος</string>
+
+        <!-- Admin Buttons -->
+        <string name="approve_cluster">Έγκριση Ομάδας</string>
+        <string name="reject_cluster">Απόρριψη Ομάδας</string>
+        <string name="notify_users">Ειδοποίηση Χρηστών</string>
+        <string name="incident_details">Λεπτομέρειες Αναφορών</string>
+
+        <!-- Admin Dialogs -->
+        <string name="approving_cluster">Έγκριση ομάδας περιστατικών...</string>
+        <string name="reject_alert_title">Απόρριψη Συναγερμού</string>
+        <string name="reject_alert_message">Θέλετε να απορρίψετε αυτόν τον συναγερμού και όλες τις %d αναφορές;</string>
+        <string name="reject">Απόρριψη</string>
+        <string name="cancel">Ακύρωση</string>
+        <string name="completed_for_reports">Ολοκληρώθηκε για %d αναφορές</string>
+        <string name="update_error">Σφάλμα ενημέρωσης: %s</string>
+
+        <!-- Notifications -->
+        <string name="no_users_found">Δεν βρέθηκαν χρήστες για ειδοποίηση.</string>
+        <string name="users_found">Βρέθηκαν %d μοναδικοί χρήστες. Αποστολή στον server.</string>
+        <string name="notification_sent">Ειδοποίηση απεστάλη στους χρήστες!</string>
+        <string name="server_failure">Αποτυχία από τον server: %s</string>
+        <string name="unknown_server_error">Άγνωστο σφάλμα από τον server.</string>
+        <string name="notification_send_error">Σφάλμα αποστολής ειδοποίησης: %s</string>
+        <string name="alert_details">Λεπτομέρειες Συναγερμού</string>
+        <string name="close">Κλείσιμο</string>
+        <string name="fire">Πυρκαγιά</string>
+        <string name="flood">Πλημμύρα</string>
+        <string name="earthquake">Σεισμός</string>
+        <string name="storm">Καταιγίδα</string>
+        <string name="other">Άλλο</string>
 </resources>

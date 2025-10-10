@@ -1,15 +1,15 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
+    <!-- Base application theme -->
     <style name="Base.Theme.SmartAlert" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="colorPrimaryVariant">@color/purple_700</item>
-    <item name="colorOnPrimary">@color/white</item>
-    <item name="colorSecondary">@color/teal_200</item>
-    <item name="colorOnSecondary">@color/black</item>
-    <item name="android:windowBackground">@color/white</item>
-    <item name="android:textColor">@color/black</item>
-    <item name="android:textColorPrimary">@color/black</item>
-    <item name="android:textColorSecondary">@color/grey_600</item>
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorPrimaryVariant">@color/primary_dark</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSecondary">@color/secondary</item>
+        <item name="colorSecondaryVariant">@color/secondary_dark</item>
+        <item name="colorOnSecondary">@color/black</item>
+        <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item>
     </style>
 
+    <!-- Main app theme -->
     <style name="Theme.SmartAlert" parent="Base.Theme.SmartAlert" />
 </resources>

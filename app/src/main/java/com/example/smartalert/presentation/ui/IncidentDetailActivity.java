@@ -1,38 +1,44 @@
 package com.example.smartalert.presentation.ui;
 
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
-import android.app.AlertDialog;
-import android.widget.*;
+import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.TextView;
+import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
-import com.example.smartalert.R;
-import com.example.smartalert.domain.model.Incident;
-import com.example.smartalert.domain.model.IncidentCluster;
-import com.google.android.material.card.MaterialCardView;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.Query;
-import java.text.SimpleDateFormat;
-import java.util.*;
+
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
+import com.example.smartalert.R;
+import com.example.smartalert.domain.model.Incident;
+import com.google.android.material.card.MaterialCardView;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
-import com.google.firebase.firestore.QuerySnapshot;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
-import androidx.annotation.NonNull;
+import java.util.Set;
 
 public class IncidentDetailActivity extends AppCompatActivity {
     private String incidentType;
@@ -40,28 +46,77 @@ public class IncidentDetailActivity extends AppCompatActivity {
     private FirebaseFirestore db;
     private ProgressBar progressBar;
     private List<Incident> allIncidents = new ArrayList<>();
-    private List<IncidentCluster> incidentClusters = new ArrayList<>();
-
-    // Προσθήκη της αρχικοποίησης του requestQueue
+    private List<ClusterData> serverClusters = new ArrayList<>();
     private RequestQueue requestQueue;
+
+    // Data class for server clusters
+    private static class ClusterData {
+        String clusterId;
+        String type;
+        List<Incident> incidents = new ArrayList<>();
+        double centerLat;
+        double centerLon;
+        long firstReportTime;
+        long lastReportTime;
+        String mainLocation;
+        double alarmLevel;
+        String alarmLevelText;
+        int uniqueUserCount;
+        int totalReports;
+
+        // Helper methods
+        Date getFirstReportTimeAsDate() { return new Date(firstReportTime); }
+        Date getLastReportTimeAsDate() { return new Date(lastReportTime); }
+        String getAlarmLevelText() { return alarmLevelText; }
+        int getUniqueUserCount() { return uniqueUserCount; }
+        int getTotalReports() { return totalReports; }
+        String getMainLocation() { return mainLocation; }
+        double getAlarmLevel() { return alarmLevel; }
+        List<Incident> getIncidents() { return incidents; }
+        String getType() { return type; }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_incident_detail);
 
+        // Initialize Firestore and Volley request queue
         db = FirebaseFirestore.getInstance();
         progressBar = findViewById(R.id.progressBar);
-
-        // Αρχικοποίηση του requestQueue
         requestQueue = Volley.newRequestQueue(this);
 
+        // Get incident type from intent
         incidentType = getIntent().getStringExtra("incidentType");
 
+        // Back button listener
+        Button backButton = findViewById(R.id.backButton);
+        backButton.setOnClickListener(v -> {
+            finish();
+        });
+
+        // Set up action bar
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            getSupportActionBar().setTitle(getTypeDisplayName(incidentType));
+        }
+
+        // Check if user is admin and load data
         checkAdminStatusAndLoad();
     }
 
+    @Override
+    public boolean onOptionsItemSelected(android.view.MenuItem item) {
+        // Handle back button in action bar
+        if (item.getItemId() == android.R.id.home) {
+            finish();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
     private void checkAdminStatusAndLoad() {
+        // Check if current user has admin privileges
         FirebaseAuth auth = FirebaseAuth.getInstance();
         if (auth.getCurrentUser() != null) {
             String uid = auth.getCurrentUser().getUid();
@@ -70,16 +125,17 @@ public class IncidentDetailActivity extends AppCompatActivity {
                         String role = doc.getString("role");
                         isAdmin = "employee".equals(role) || "admin".equals(role);
                         initViews();
-                        loadIncidentsForType();
+                        fetchClustersFromServer();
                     });
         } else {
             isAdmin = false;
             initViews();
-            loadIncidentsForType();
+            fetchClustersFromServer();
         }
     }
 
     private void initViews() {
+        // Initialize UI components with default values
         TextView typeTitle = findViewById(R.id.incidentTypeTitle);
         TextView incidentCountText = findViewById(R.id.incidentCount);
         TextView alarmLevel = findViewById(R.id.alarmLevel);
@@ -88,16 +144,124 @@ public class IncidentDetailActivity extends AppCompatActivity {
             typeTitle.setText(getTypeDisplayName(incidentType));
         }
         if (incidentCountText != null) {
-            incidentCountText.setText("Φόρτωση...");
+            incidentCountText.setText(getString(R.string.loading));
         }
         if (alarmLevel != null) {
-            alarmLevel.setText("Επίπεδο Συναγερμού: Υπολογισμός...");
+            alarmLevel.setText(getString(R.string.alarm_level_calculating));
         }
     }
 
-    private void loadIncidentsForType() {
+    private void fetchClustersFromServer() {
+        // Show loading indicator
         if (progressBar != null) progressBar.setVisibility(View.VISIBLE);
 
+        String serverUrl = "http://10.0.2.2:3000/getClustersByType";
+
+        // Create JSON request body
+        JSONObject jsonBody = new JSONObject();
+        try {
+            jsonBody.put("incidentType", incidentType);
+        } catch (JSONException e) {
+            Log.e("IncidentDetailActivity", "Error creating JSON for server request", e);
+            if (progressBar != null) progressBar.setVisibility(View.GONE);
+            return;
+        }
+
+        // Make POST request to server
+        JsonObjectRequest request = new JsonObjectRequest(
+                Request.Method.POST,
+                serverUrl,
+                jsonBody,
+                response -> {
+                    if (progressBar != null) progressBar.setVisibility(View.GONE);
+                    try {
+                        boolean success = response.getBoolean("success");
+                        if (success) {
+                            parseServerClusters(response);
+                        } else {
+                            String error = response.getString("error");
+                            Toast.makeText(this, getString(R.string.server_error) + ": " + error, Toast.LENGTH_LONG).show();
+                            displayIncidentClusters();
+                        }
+                    } catch (JSONException e) {
+                        Log.e("IncidentDetailActivity", "Error parsing server response", e);
+                        Toast.makeText(this, getString(R.string.data_parsing_error), Toast.LENGTH_SHORT).show();
+                    }
+                },
+                error -> {
+                    if (progressBar != null) progressBar.setVisibility(View.GONE);
+                    Log.e("IncidentDetailActivity", "Error fetching clusters from server", error);
+                    Toast.makeText(this, getString(R.string.connection_error), Toast.LENGTH_LONG).show();
+                    loadIncidentsWithoutClustering();
+                }
+        );
+
+        requestQueue.add(request);
+    }
+
+    private void parseServerClusters(JSONObject response) throws JSONException {
+        // Clear existing data
+        serverClusters.clear();
+        allIncidents.clear();
+
+        JSONArray clustersArray = response.getJSONArray("clusters");
+
+        // Parse each cluster from server response
+        for (int i = 0; i < clustersArray.length(); i++) {
+            JSONObject clusterJson = clustersArray.getJSONObject(i);
+
+            // Parse incidents array within cluster
+            List<Incident> clusterIncidents = new ArrayList<>();
+            JSONArray incidentsArray = clusterJson.getJSONArray("incidents");
+            for (int j = 0; j < incidentsArray.length(); j++) {
+                JSONObject incidentJson = incidentsArray.getJSONObject(j);
+                Incident incident = parseIncidentFromJson(incidentJson);
+                clusterIncidents.add(incident);
+                allIncidents.add(incident);
+            }
+
+            // Create cluster object with all data
+            ClusterData cluster = new ClusterData();
+            cluster.clusterId = clusterJson.getString("clusterId");
+            cluster.type = clusterJson.getString("type");
+            cluster.incidents = clusterIncidents;
+            cluster.centerLat = clusterJson.getDouble("centerLat");
+            cluster.centerLon = clusterJson.getDouble("centerLon");
+            cluster.firstReportTime = clusterJson.getLong("firstReportTime");
+            cluster.lastReportTime = clusterJson.getLong("lastReportTime");
+            cluster.mainLocation = clusterJson.getString("mainLocation");
+            cluster.alarmLevel = clusterJson.getDouble("alarmLevel");
+            cluster.alarmLevelText = clusterJson.getString("alarmLevelText");
+            cluster.uniqueUserCount = clusterJson.getInt("uniqueUserCount");
+            cluster.totalReports = clusterJson.getInt("totalReports");
+
+            serverClusters.add(cluster);
+        }
+
+        // Update UI with new data
+        updateClusterViews();
+        displayIncidentClusters();
+    }
+
+    private Incident parseIncidentFromJson(JSONObject incidentJson) throws JSONException {
+        // Convert JSON object to Incident model
+        Incident incident = new Incident();
+        incident.setId(incidentJson.getString("id"));
+        incident.setType(incidentJson.getString("type"));
+        incident.setUserId(incidentJson.getString("userId"));
+        incident.setLatitude(incidentJson.getDouble("latitude"));
+        incident.setLongitude(incidentJson.getDouble("longitude"));
+        incident.setLocation(incidentJson.getString("location"));
+
+        long timestamp = incidentJson.getLong("timestamp");
+        incident.setTimestamp(new Date(timestamp));
+
+        incident.setComments(incidentJson.optString("comments", ""));
+        return incident;
+    }
+
+    private void loadIncidentsWithoutClustering() {
+        // Fallback method when server clustering fails
         Query query = db.collection("incidents")
                 .whereEqualTo("type", incidentType);
 
@@ -105,105 +269,85 @@ public class IncidentDetailActivity extends AppCompatActivity {
             if (progressBar != null) progressBar.setVisibility(View.GONE);
 
             allIncidents.clear();
-            incidentClusters.clear();
+            serverClusters.clear();
 
             if (task.isSuccessful()) {
-                for (com.google.firebase.firestore.QueryDocumentSnapshot document : task.getResult()) {
+                for (QueryDocumentSnapshot document : task.getResult()) {
                     Incident incident = document.toObject(Incident.class);
                     incident.setId(document.getId());
                     allIncidents.add(incident);
-                }
 
-                clusterIncidents();
+                    // Create simple cluster for each incident (fallback when no server clustering)
+                    ClusterData cluster = new ClusterData();
+                    cluster.clusterId = document.getId();
+                    cluster.type = incident.getType();
+                    cluster.incidents = new ArrayList<>();
+                    cluster.incidents.add(incident);
+                    cluster.centerLat = incident.getLatitude();
+                    cluster.centerLon = incident.getLongitude();
+                    cluster.firstReportTime = incident.getTimestamp().getTime();
+                    cluster.lastReportTime = incident.getTimestamp().getTime();
+                    cluster.mainLocation = incident.getLocation();
+                    cluster.alarmLevel = 10.0;
+                    cluster.alarmLevelText = "LOW";
+                    cluster.uniqueUserCount = 1;
+                    cluster.totalReports = 1;
+
+                    serverClusters.add(cluster);
+                }
                 updateClusterViews();
                 displayIncidentClusters();
             } else {
-                Toast.makeText(this, "Σφάλμα φόρτωσης περιστατικών", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, getString(R.string.incident_loading_error), Toast.LENGTH_LONG).show();
                 displayIncidentClusters();
             }
         });
     }
 
-    private void clusterIncidents() {
-        final double CLUSTER_DISTANCE_KM = 10.0;
-        final long TIME_WINDOW_MS = 2 * 60 * 60 * 1000; // 2 ώρες
-
-        for (Incident incident : allIncidents) {
-            boolean added = false;
-            for (IncidentCluster cluster : incidentClusters) {
-                if (isIncidentInCluster(incident, cluster, CLUSTER_DISTANCE_KM, TIME_WINDOW_MS)) {
-                    cluster.addIncident(incident);
-                    added = true;
-                    break;
-                }
-            }
-            if (!added) {
-                IncidentCluster c = new IncidentCluster(incident);
-                c.setClusterId(UUID.randomUUID().toString());
-                incidentClusters.add(c);
-            }
-        }
-        incidentClusters.sort((c1, c2) -> Double.compare(c2.getAlarmLevel(), c1.getAlarmLevel()));
-    }
-
-    private boolean isIncidentInCluster(Incident incident, IncidentCluster cluster,
-                                        double maxDistKm, long maxTimeDiff) {
-        if (!incident.getType().equals(cluster.getType())) return false;
-        long timeDiff = Math.abs(incident.getTimestamp().getTime() - cluster.getFirstReportTime().getTime());
-        if (timeDiff > maxTimeDiff) return false;
-        double dist = haversine(incident.getLatitude(), incident.getLongitude(),
-                cluster.getCenterLat(), cluster.getCenterLon());
-        return dist <= maxDistKm;
-    }
-
-    private double haversine(double lat1, double lon1, double lat2, double lon2) {
-        final double R = 6371;
-        double dLat = Math.toRadians(lat2-lat1);
-        double dLon = Math.toRadians(lon2-lon1);
-        double a = Math.sin(dLat/2)*Math.sin(dLat/2) +
-                Math.cos(Math.toRadians(lat1))*Math.cos(Math.toRadians(lat2))*Math.sin(dLon/2)*Math.sin(dLon/2);
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        return R * c;
-    }
-
     private void updateClusterViews() {
+        // Update summary information in header
         TextView incidentCountText = findViewById(R.id.incidentCount);
         TextView alarmLevel = findViewById(R.id.alarmLevel);
 
-        int totalClusters = incidentClusters.size();
+        int totalClusters = serverClusters.size();
         int totalIncidents = allIncidents.size();
 
         if (incidentCountText != null) {
-            incidentCountText.setText(String.format("Σύνολο: %d συναγερμοί, %d αναφορές", totalClusters, totalIncidents));
+            incidentCountText.setText(getString(R.string.total_alerts, totalClusters, totalIncidents));
         }
 
-        if (alarmLevel != null && !incidentClusters.isEmpty()) {
-            double maxAlarmLevel = incidentClusters.get(0).getAlarmLevel();
-            alarmLevel.setText(String.format("Επίπεδο Συναγερμού: %.1f/100 (%s)",
-                    maxAlarmLevel, incidentClusters.get(0).getAlarmLevelText()));
+        if (alarmLevel != null && !serverClusters.isEmpty()) {
+            double maxAlarmLevel = serverClusters.get(0).getAlarmLevel();
+            String alarmText = serverClusters.get(0).getAlarmLevelText();
+            alarmLevel.setText(getString(R.string.alarm_level, maxAlarmLevel, alarmText));
         }
     }
 
     private void displayIncidentClusters() {
+        // Display all clusters in the scrollable container
         LinearLayout container = findViewById(R.id.incidentsContainer);
         container.removeAllViews();
 
-        if (incidentClusters.isEmpty()) {
+        if (serverClusters.isEmpty()) {
+            // Show message when no incidents found
             TextView noDataText = new TextView(this);
-            noDataText.setText("Δεν βρέθηκαν συναγερμοί για τον τύπο: " + getTypeDisplayName(incidentType));
+            noDataText.setText(getString(R.string.no_alerts_found, getTypeDisplayName(incidentType)));
             noDataText.setPadding(16, 16, 16, 16);
             noDataText.setTextSize(16);
             noDataText.setGravity(View.TEXT_ALIGNMENT_CENTER);
+            noDataText.setTextColor(ContextCompat.getColor(this, R.color.on_background));
             container.addView(noDataText);
         } else {
-            for (IncidentCluster cluster : incidentClusters) {
+            // Create a card for each cluster
+            for (ClusterData cluster : serverClusters) {
                 MaterialCardView card = createClusterCard(cluster);
                 container.addView(card);
             }
         }
     }
 
-    private MaterialCardView createClusterCard(IncidentCluster cluster) {
+    private MaterialCardView createClusterCard(ClusterData cluster) {
+        // Create MaterialCardView for cluster display
         MaterialCardView card = new MaterialCardView(this);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -213,65 +357,80 @@ public class IncidentDetailActivity extends AppCompatActivity {
         card.setLayoutParams(params);
         card.setRadius(12);
         card.setCardElevation(4);
-        card.setCardBackgroundColor(ContextCompat.getColor(this, R.color.primaryColor));
 
+        card.setCardBackgroundColor(ContextCompat.getColor(this, R.color.surface));
+
+        // Create inner layout for card content
         LinearLayout innerLayout = new LinearLayout(this);
         innerLayout.setOrientation(LinearLayout.VERTICAL);
         innerLayout.setPadding(20, 20, 20, 20);
         card.addView(innerLayout);
 
+        // Cluster header with alarm level
         TextView clusterHeader = new TextView(this);
-        clusterHeader.setText("🚨 ΣΥΝΑΓΕΡΜΟΣ - " + cluster.getAlarmLevelText());
+        clusterHeader.setText(getString(R.string.alert_header, cluster.getAlarmLevelText()));
         clusterHeader.setTextSize(18);
         clusterHeader.setTypeface(null, android.graphics.Typeface.BOLD);
-        clusterHeader.setTextColor(ContextCompat.getColor(this, R.color.white));
+        clusterHeader.setTextColor(ContextCompat.getColor(this, R.color.on_surface));
         innerLayout.addView(clusterHeader);
 
-        addClusterInfoRow(innerLayout, "📊 Επίπεδο Βαρύτητας:", String.format(Locale.getDefault(), "%.1f/100", cluster.getAlarmLevel()));
-        addClusterInfoRow(innerLayout, "👥 Μοναδικοί Χρήστες:", cluster.getUniqueUserCount() + " άτομα");
-        addClusterInfoRow(innerLayout, "📋 Συνολικές Αναφορές:", cluster.getTotalReports() + " αναφορές");
-        addClusterInfoRow(innerLayout, "📍 Κύρια Τοποθεσία:", cluster.getMainLocation());
-        addClusterInfoRow(innerLayout, "⏰ Χρονικό Πλαίσιο:", formatDate(cluster.getFirstReportTime()) + " - " + formatDate(cluster.getLastReportTime()));
+        // Add cluster information rows
+        addClusterInfoRow(innerLayout, getString(R.string.severity_level),
+                String.format(Locale.getDefault(), "%.1f/100", cluster.getAlarmLevel()));
+        addClusterInfoRow(innerLayout, getString(R.string.unique_users),
+                cluster.getUniqueUserCount() + " " + getString(R.string.people));
+        addClusterInfoRow(innerLayout, getString(R.string.total_reports),
+                cluster.getTotalReports() + " " + getString(R.string.reports));
+        addClusterInfoRow(innerLayout, getString(R.string.main_location),
+                cluster.getMainLocation());
+        addClusterInfoRow(innerLayout, getString(R.string.time_frame),
+                formatDate(cluster.getFirstReportTimeAsDate()) + " - " + formatDate(cluster.getLastReportTimeAsDate()));
 
+        // Add admin buttons if user has admin privileges
         if (isAdmin) {
             View separator = new View(this);
             separator.setLayoutParams(new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT, 2
             ));
-            separator.setBackgroundColor(ContextCompat.getColor(this, R.color.white));
+            separator.setBackgroundColor(ContextCompat.getColor(this, R.color.on_surface));
             separator.setPadding(0, 16, 0, 16);
             innerLayout.addView(separator);
 
             LinearLayout buttonLayout = new LinearLayout(this);
             buttonLayout.setOrientation(LinearLayout.HORIZONTAL);
 
+            // APPROVE button - sends notification and deletes incidents
             Button approveBtn = new Button(this);
-            approveBtn.setText("✅ Έγκριση Ομάδας");
-            approveBtn.setOnClickListener(v -> approveCluster(cluster));
+            approveBtn.setText(getString(R.string.approve_cluster));
+            approveBtn.setOnClickListener(v -> approveAndNotifyCluster(cluster));
 
+            // REJECT button - just deletes incidents without notification
             Button rejectBtn = new Button(this);
-            rejectBtn.setText("❌ Απόρριψη Ομάδας");
+            rejectBtn.setText(getString(R.string.reject_cluster));
             rejectBtn.setOnClickListener(v -> rejectCluster(cluster));
-
-            Button notifyBtn = new Button(this);
-            notifyBtn.setText("📢 Ειδοποίηση Χρηστών");
-            notifyBtn.setOnClickListener(v -> sendNotificationToClusterUsers(cluster));
 
             LinearLayout.LayoutParams btnParams = new LinearLayout.LayoutParams(
                     0, LinearLayout.LayoutParams.WRAP_CONTENT, 1
             );
+            btnParams.setMargins(4, 0, 4, 0);
             approveBtn.setLayoutParams(btnParams);
             rejectBtn.setLayoutParams(btnParams);
-            notifyBtn.setLayoutParams(btnParams);
 
             buttonLayout.addView(approveBtn);
             buttonLayout.addView(rejectBtn);
-            buttonLayout.addView(notifyBtn);
+
             innerLayout.addView(buttonLayout);
 
+            // Details button to show individual incidents
             Button detailsBtn = new Button(this);
-            detailsBtn.setText("📋 Λεπτομέρειες Αναφορών");
+            detailsBtn.setText(getString(R.string.incident_details));
             detailsBtn.setOnClickListener(v -> showClusterDetails(cluster));
+            LinearLayout.LayoutParams detailsParams = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+            detailsParams.setMargins(4, 8, 4, 0);
+            detailsBtn.setLayoutParams(detailsParams);
             innerLayout.addView(detailsBtn);
         }
 
@@ -279,6 +438,7 @@ public class IncidentDetailActivity extends AppCompatActivity {
     }
 
     private void addClusterInfoRow(LinearLayout parent, String label, String value) {
+        // Create a row with label and value for cluster information
         LinearLayout rowLayout = new LinearLayout(this);
         rowLayout.setOrientation(LinearLayout.HORIZONTAL);
         rowLayout.setLayoutParams(new LinearLayout.LayoutParams(
@@ -290,7 +450,7 @@ public class IncidentDetailActivity extends AppCompatActivity {
         labelView.setText(label);
         labelView.setTextSize(14);
         labelView.setTypeface(null, android.graphics.Typeface.BOLD);
-        labelView.setTextColor(ContextCompat.getColor(this, R.color.white));
+        labelView.setTextColor(ContextCompat.getColor(this, R.color.on_surface));
         labelView.setLayoutParams(new LinearLayout.LayoutParams(
                 0, LinearLayout.LayoutParams.WRAP_CONTENT, 1
         ));
@@ -298,7 +458,7 @@ public class IncidentDetailActivity extends AppCompatActivity {
         TextView valueView = new TextView(this);
         valueView.setText(value);
         valueView.setTextSize(14);
-        valueView.setTextColor(ContextCompat.getColor(this, R.color.white));
+        valueView.setTextColor(ContextCompat.getColor(this, R.color.on_surface));
         valueView.setLayoutParams(new LinearLayout.LayoutParams(
                 0, LinearLayout.LayoutParams.WRAP_CONTENT, 1
         ));
@@ -308,172 +468,219 @@ public class IncidentDetailActivity extends AppCompatActivity {
         parent.addView(rowLayout);
     }
 
-    private void approveCluster(IncidentCluster cluster) {
-        ProgressDialog progressDialog = new ProgressDialog(this);
-        progressDialog.setMessage("Έγκριση ομάδας περιστατικών...");
+    private void approveAndNotifyCluster(ClusterData cluster) {
+        // Approve cluster: send notifications and then delete incidents
+        final ProgressDialog progressDialog = new ProgressDialog(this);
+        progressDialog.setMessage("Sending notifications and deleting...");
         progressDialog.show();
 
-        List<String> ids = new ArrayList<>();
-        for (Incident incident : cluster.getIncidents()) {
-            ids.add(incident.getId());
-        }
+        // 1. First send notifications to all users in cluster
+        sendNotificationToClusterUsers(cluster, new NotificationCallback() {
+            @Override
+            public void onNotificationSent() {
+                // 2. After notification is sent, delete incidents
+                deleteIncidentsFromServer(cluster, progressDialog);
+            }
 
-        updateStatusForCluster(ids, "approved", progressDialog);
+            @Override
+            public void onNotificationFailed(String error) {
+                progressDialog.dismiss();
+                Toast.makeText(IncidentDetailActivity.this,
+                        "Notification sending error: " + error, Toast.LENGTH_LONG).show();
+            }
+        });
     }
 
-    private void rejectCluster(IncidentCluster cluster) {
+    private void rejectCluster(ClusterData cluster) {
+        // Show confirmation dialog for rejecting cluster
         new AlertDialog.Builder(this)
-                .setTitle("Απόρριψη Συναγερμού")
-                .setMessage("Θέλετε να απορρίψετε αυτόν τον συναγερμού και όλες τις " + cluster.getTotalReports() + " αναφορές;")
-                .setPositiveButton("Απόρριψη", (dialog, which) -> {
-                    List<String> ids = new ArrayList<>();
-                    for (Incident incident : cluster.getIncidents()) {
-                        ids.add(incident.getId());
-                    }
-                    updateStatusForCluster(ids, "rejected", null);
+                .setTitle(getString(R.string.reject_alert_title))
+                .setMessage(getString(R.string.reject_alert_message, cluster.getTotalReports()))
+                .setPositiveButton(getString(R.string.reject), (dialog, which) -> {
+                    deleteClusterIncidents(cluster);
                 })
-                .setNegativeButton("Ακύρωση", null)
+                .setNegativeButton(getString(R.string.cancel), null)
                 .show();
     }
 
-    private void updateStatusForCluster(List<String> ids, String newStatus, ProgressDialog progressDialog) {
-        final int total = ids.size();
-        final int[] completed = {0};
-        for (String id : ids) {
-            db.collection("incidents").document(id)
-                    .update("status", newStatus, newStatus + "At", new Date())
-                    .addOnSuccessListener(aVoid -> {
-                        completed[0]++;
-                        if (completed[0] == total) {
-                            if (progressDialog != null) progressDialog.dismiss();
-                            Toast.makeText(this,
-                                    "Ολοκληρώθηκε για " + total + " αναφορές", Toast.LENGTH_SHORT).show();
-                            loadIncidentsForType();
-                        }
-                    })
-                    .addOnFailureListener(e -> {
-                        if (progressDialog != null) progressDialog.dismiss();
-                        Toast.makeText(this, "Σφάλμα ενημέρωσης: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                    });
-        }
+    private void deleteClusterIncidents(ClusterData cluster) {
+        // Show confirmation dialog for deleting incidents
+        new AlertDialog.Builder(this)
+                .setTitle(getString(R.string.delete_incidents_title))
+                .setMessage(getString(R.string.delete_incidents_message, cluster.getTotalReports()))
+                .setPositiveButton(getString(R.string.delete), (dialog, which) -> {
+                    deleteIncidentsFromServer(cluster, null);
+                })
+                .setNegativeButton(getString(R.string.cancel), null)
+                .show();
     }
 
-    // Ενημερωμένη μέθοδος sendNotificationToClusterUsers
-    private void sendNotificationToClusterUsers(IncidentCluster cluster) {
-        String msg = "Οδηγίες Πολιτικής Προστασίας για " + getTypeDisplayName(cluster.getType()) +
-                " στην περιοχή " + cluster.getMainLocation() + ". Αριθμός αναφορών: " + cluster.getTotalReports();
+    private void deleteIncidentsFromServer(ClusterData cluster, final ProgressDialog progressDialogParam) {
+        // Delete incidents from server via API call
+        final ProgressDialog progressDialog;
 
-        // Βήμα 1: Εξαγωγή μοναδικών userIds από τα incidents της cluster
+        if (progressDialogParam == null) {
+            progressDialog = new ProgressDialog(this);
+            progressDialog.setMessage(getString(R.string.deleting_incidents));
+            progressDialog.show();
+        } else {
+            progressDialog = progressDialogParam;
+        }
+
+        // Collect all incident IDs for deletion
+        List<String> incidentIds = new ArrayList<>();
+        for (Incident incident : cluster.getIncidents()) {
+            incidentIds.add(incident.getId());
+        }
+
+        String serverUrl = "http://10.0.2.2:3000/deleteIncidents";
+
+        JSONObject jsonBody = new JSONObject();
+        try {
+            jsonBody.put("incidentIds", new JSONArray(incidentIds));
+        } catch (JSONException e) {
+            Log.e("IncidentDetailActivity", "Error creating JSON for delete request", e);
+            progressDialog.dismiss();
+            Toast.makeText(this, getString(R.string.request_preparation_error), Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Make DELETE request to server
+        JsonObjectRequest request = new JsonObjectRequest(
+                Request.Method.POST,
+                serverUrl,
+                jsonBody,
+                response -> {
+                    progressDialog.dismiss();
+                    try {
+                        boolean success = response.getBoolean("success");
+                        if (success) {
+                            String message = response.getString("message");
+                            Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+                            // Refresh data after deletion
+                            fetchClustersFromServer();
+                        } else {
+                            String error = response.getString("error");
+                            Toast.makeText(this, getString(R.string.delete_error) + ": " + error, Toast.LENGTH_LONG).show();
+                        }
+                    } catch (JSONException e) {
+                        Log.e("IncidentDetailActivity", "Error parsing delete response", e);
+                        Toast.makeText(this, getString(R.string.data_parsing_error), Toast.LENGTH_SHORT).show();
+                    }
+                },
+                error -> {
+                    progressDialog.dismiss();
+                    Log.e("IncidentDetailActivity", "Error deleting incidents from server", error);
+                    Toast.makeText(this, getString(R.string.connection_error), Toast.LENGTH_LONG).show();
+                }
+        );
+
+        requestQueue.add(request);
+    }
+
+    // Interface for notification callbacks
+    private interface NotificationCallback {
+        void onNotificationSent();
+        void onNotificationFailed(String error);
+    }
+
+    private void sendNotificationToClusterUsers(ClusterData cluster, NotificationCallback callback) {
+        // Create notification message for cluster
+        String msg = getString(R.string.civil_protection_instructions) + " " +
+                getTypeDisplayName(cluster.getType()) + " " +
+                getString(R.string.in_area) + " " + cluster.getMainLocation() + ". " +
+                getString(R.string.number_of_reports) + ": " + cluster.getTotalReports();
+
+        // Collect unique user IDs from all incidents in cluster
         Set<String> userIdsSet = new HashSet<>();
         for (Incident incident : cluster.getIncidents()) {
-            userIdsSet.add(incident.getUserId()); // Υποθέτουμε ότι το Incident έχει μέθοδο getUserId()
+            userIdsSet.add(incident.getUserId());
         }
         List<String> userIds = new ArrayList<>(userIdsSet);
 
         if (userIds.isEmpty()) {
-            Toast.makeText(this, "Δεν βρέθηκαν χρήστες για ειδοποίηση.", Toast.LENGTH_SHORT).show();
-            Log.d("IncidentDetailActivity", "Δεν υπάρχουν userIds για να ανακτήσουμε tokens.");
+            callback.onNotificationFailed("No users found for notification");
             return;
         }
 
-        // Αντί να κάνουμε query για tokens εδώ, στέλνουμε τα userIds στον server
-        Log.d("IncidentDetailActivity", "Βρέθηκαν " + userIds.size() + " μοναδικοί χρήστες. Αποστολή στον server.");
-        sendAlertToServer(userIds, "Ενημέρωση Συναγερμού", msg, cluster.getType());
-    }
+        Log.d("IncidentDetailActivity", getString(R.string.users_found, userIds.size()));
 
-    // Νέα μέθοδος για να στέλνει το request στον Node.js server
-    private void sendAlertToServer(List<String> userIds, String title, String message, String incidentType) {
-        String serverUrl = "http://10.0.2.2:3000/sendAlert"; // Ή η πραγματική διεύθυνση του server σου
+        String serverUrl = "http://10.0.2.2:3000/sendAlert";
 
+        // Create notification request
         JSONObject jsonBody = new JSONObject();
         try {
-            jsonBody.put("title", title);
-            jsonBody.put("message", message);
-            jsonBody.put("incidentType", incidentType);
-            jsonBody.put("userIds", new JSONArray(userIds)); // Στέλνουμε τη λίστα με τα userIds
+            jsonBody.put("title", getString(R.string.alert_update));
+            jsonBody.put("message", msg);
+            jsonBody.put("incidentType", cluster.getType());
+            jsonBody.put("userIds", new JSONArray(userIds));
         } catch (JSONException e) {
-            Log.e("IncidentDetailActivity", "Σφάλμα δημιουργίας JSON body για server request", e);
-            Toast.makeText(this, "Σφάλμα ετοιμασίας αιτήματος.", Toast.LENGTH_SHORT).show();
+            Log.e("IncidentDetailActivity", "Error creating JSON body for server request", e);
+            callback.onNotificationFailed("Request creation error");
             return;
         }
 
+        // Send notification request to server
         JsonObjectRequest request = new JsonObjectRequest(Request.Method.POST, serverUrl, jsonBody,
                 response -> {
-                    Log.d("IncidentDetailActivity", "Απάντηση από τον server: " + response.toString());
-                    // Ο server θα επιστρέψει ένα JSON με success: true/false
+                    Log.d("IncidentDetailActivity", "Server response: " + response.toString());
                     try {
                         boolean success = response.getBoolean("success");
                         if (success) {
-                            Toast.makeText(this, "Ειδοποίηση απεστάλη στους χρήστες!", Toast.LENGTH_LONG).show();
+                            Toast.makeText(this, getString(R.string.notification_sent), Toast.LENGTH_LONG).show();
+                            callback.onNotificationSent();
                         } else {
                             String errorMsg = response.getString("error");
-                            Toast.makeText(this, "Αποτυχία από τον server: " + errorMsg, Toast.LENGTH_LONG).show();
+                            callback.onNotificationFailed(errorMsg);
                         }
                     } catch (JSONException e) {
-                        Log.e("IncidentDetailActivity", "Σφάλμα ανάλυσης απάντησης server", e);
-                        Toast.makeText(this, "Άγνωστο σφάλμα από τον server.", Toast.LENGTH_LONG).show();
+                        Log.e("IncidentDetailActivity", "Error parsing server response", e);
+                        callback.onNotificationFailed("Response parsing error");
                     }
                 },
                 error -> {
-                    Log.e("IncidentDetailActivity", "Σφάλμα αποστολής στον server: ", error);
-                    if (error.networkResponse != null) {
-                        Log.e("IncidentDetailActivity", "HTTP Status Code: " + error.networkResponse.statusCode);
-                        Log.e("IncidentDetailActivity", "Error Data: " + new String(error.networkResponse.data));
-                    }
-                    Toast.makeText(this, "Σφάλμα αποστολής ειδοποίησης: " + error.getMessage(), Toast.LENGTH_LONG).show();
-                }) {
-            @Override
-            public Map<String, String> getHeaders() {
-                Map<String, String> headers = new HashMap<>();
-                headers.put("Content-Type", "application/json");
-                // Αν ο server σου απαιτεί κάποια εξουσιοδότηση (π.χ., API key), βάλε την εδώ
-                // headers.put("Authorization", "Bearer YOUR_API_TOKEN_HERE");
-                return headers;
-            }
-        };
+                    Log.e("IncidentDetailActivity", "Error sending to server: ", error);
+                    callback.onNotificationFailed("Connection error");
+                });
+
         requestQueue.add(request);
     }
 
-    // Πλέον δεν χρειαζόμαστε την παλιά sendFCMNotifications με τον παλιό τρόπο
-    // Μπορείς να την διαγράψεις ή να την σχολιάσεις
-    /*
-    private void sendFCMNotifications(List<String> tokens, String messageBody) {
-        // ... (παλιός κώδικας που δεν λειτουργεί)
-    }
-    */
-
-    private void showClusterDetails(IncidentCluster cluster) {
+    private void showClusterDetails(ClusterData cluster) {
+        // Show detailed view of all incidents in cluster
         StringBuilder details = new StringBuilder();
-        details.append("Λεπτομέρειες Συναγερμού:\n\n");
+        details.append(getString(R.string.alert_details)).append(":\n\n");
         for (int i = 0; i < cluster.getIncidents().size(); i++) {
             Incident incident = cluster.getIncidents().get(i);
-            details.append(i + 1).append(". Χρήστης: ").append(incident.getUserId())
-                    .append("\n   Τοποθεσία: ").append(incident.getLocation())
-                    .append("\n   Χρόνος: ").append(formatDate(incident.getTimestamp()))
-                    .append("\n   Σχόλια: ").append(incident.getComments())
+            details.append(i + 1).append(". ").append(getString(R.string.user)).append(": ").append(incident.getUserId())
+                    .append("\n   ").append(getString(R.string.location)).append(": ").append(incident.getLocation())
+                    .append("\n   ").append(getString(R.string.time)).append(": ").append(formatDate(incident.getTimestamp()))
+                    .append("\n   ").append(getString(R.string.comments)).append(": ").append(incident.getComments())
                     .append("\n\n");
         }
         new AlertDialog.Builder(this)
-                .setTitle("Λεπτομέρειες " + cluster.getTotalReports() + " Αναφορών")
+                .setTitle(getString(R.string.incident_details) + " " + cluster.getTotalReports() + " " + getString(R.string.reports))
                 .setMessage(details.toString())
-                .setPositiveButton("Κλείσιμο", null)
+                .setPositiveButton(getString(R.string.close), null)
                 .show();
     }
 
     private String formatDate(Date date) {
-        if (date == null) return "Άγνωστο";
+        // Format date for display
+        if (date == null) return getString(R.string.unknown);
         SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
         return sdf.format(date);
     }
 
     private String getTypeDisplayName(String typeKey) {
-        if (typeKey == null) return "Άγνωστος τύπος";
+        // Convert incident type key to display name
+        if (typeKey == null) return getString(R.string.unknown_type);
         switch (typeKey) {
-            case "fire": return "Πυρκαγιά";
-            case "flood": return "Πλημμύρα";
-            case "earthquake": return "Σεισμός";
-            case "storm": return "Καταιγίδα";
-            case "other": return "Άλλο";
+            case "fire": return getString(R.string.fire);
+            case "flood": return getString(R.string.flood);
+            case "earthquake": return getString(R.string.earthquake);
+            case "storm": return getString(R.string.storm);
+            case "other": return getString(R.string.other);
             default: return typeKey;
         }
     }

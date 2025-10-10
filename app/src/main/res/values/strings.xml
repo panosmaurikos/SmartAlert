@@ -159,7 +159,9 @@
     <string name="your_incident_rejected">Your incident for %s has been rejected</string>
     <string name="incident_status_update">Status Update</string>
     <string name="incident_status_changed">The status of your incident for %s has changed</string>
-
+    <string name="unknown_date">Unknown date</string>
+    <string name="more_incidents">+ %1$d incidents</string>
+    <string name="incident_info">📍 %1$s\n📅 %2$s</string>
     <!-- Incident Types -->
     <string name="fire">Fire</string>
     <string name="flood">Flood</string>

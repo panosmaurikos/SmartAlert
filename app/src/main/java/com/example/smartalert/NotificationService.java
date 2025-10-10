@@ -13,9 +13,9 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.content.Intent;
 import androidx.core.content.ContextCompat;
-import com.google.firebase.firestore.FirebaseFirestore; // Added
-import com.example.smartalert.data.repository.AuthRepositoryImpl; // Added
-import com.example.smartalert.domain.repository.AuthRepository; // Added
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.example.smartalert.data.repository.AuthRepositoryImpl;
+import com.example.smartalert.domain.repository.AuthRepository;
 
 public class NotificationService extends FirebaseMessagingService {
     private static final String TAG = "NotificationService";
@@ -27,12 +27,9 @@ public class NotificationService extends FirebaseMessagingService {
     public void onCreate() {
         super.onCreate();
         createNotificationChannel();
-
         this.authRepository = new AuthRepositoryImpl();
-
     }
 
-    // This replaces the old onTokenRefresh
     @Override
     public void onNewToken(String token) {
         Log.d(TAG, "Refreshed token: " + token);
@@ -43,15 +40,22 @@ public class NotificationService extends FirebaseMessagingService {
     public void onMessageReceived(RemoteMessage remoteMessage) {
         Log.d(TAG, "Received notification from: " + remoteMessage.getFrom());
 
+        // First check if there is approval status in data payload
         if (remoteMessage.getData().size() > 0) {
             Log.d(TAG, "Message data payload: " + remoteMessage.getData());
 
-            String title = remoteMessage.getData().get("title");
-            String message = remoteMessage.getData().get("message");
+            String approvalStatus = remoteMessage.getData().get("approvalStatus");
             String incidentType = remoteMessage.getData().get("incidentType");
-            String latitude = remoteMessage.getData().get("latitude");
-            String longitude = remoteMessage.getData().get("longitude");
+            String message = remoteMessage.getData().get("message");
 
+            // If approval status exists, show appropriate message
+            if (approvalStatus != null) {
+                handleApprovalNotification(approvalStatus, incidentType, message);
+                return;
+            }
+
+            // Regular notifications
+            String title = remoteMessage.getData().get("title");
             handleMessageNow(title, message, incidentType);
         }
 
@@ -63,13 +67,35 @@ public class NotificationService extends FirebaseMessagingService {
         }
     }
 
+    private void handleApprovalNotification(String approvalStatus, String incidentType, String message) {
+        String title;
+        String notificationMessage;
+
+        if ("approved".equals(approvalStatus)) {
+            title = "Approved Incident";
+            notificationMessage = message != null ? message :
+                    "Your incident for " + getTypeDisplayName(incidentType) + " has been approved";
+        } else if ("rejected".equals(approvalStatus)) {
+            title = "Rejected Incident";
+            notificationMessage = message != null ? message :
+                    "Your incident for " + getTypeDisplayName(incidentType) + " has been rejected";
+        } else {
+            title = "Status Update";
+            notificationMessage = message != null ? message :
+                    "The status of your incident for " + getTypeDisplayName(incidentType) + " has changed";
+        }
+
+        showNotification(title, notificationMessage, incidentType);
+        broadcastNotificationToActivity(title, notificationMessage, incidentType);
+    }
+
     private void handleMessageNow(String title, String message, String incidentType) {
         showNotification(title, message, incidentType);
-
         broadcastNotificationToActivity(title, message, incidentType);
     }
 
     private void broadcastNotificationToActivity(String title, String message, String incidentType) {
+        // Broadcast notification to activities for real-time updates
         Intent intent = new Intent("NEW_EMERGENCY_NOTIFICATION");
         intent.putExtra("title", title);
         intent.putExtra("message", message);
@@ -78,6 +104,7 @@ public class NotificationService extends FirebaseMessagingService {
     }
 
     private void saveTokenToFirestore(String token) {
+        // Save FCM token to Firestore for push notifications
         String userId = getCurrentUserId();
         if (userId != null) {
             authRepository.updateFCMToken(userId, token)
@@ -89,6 +116,7 @@ public class NotificationService extends FirebaseMessagingService {
     }
 
     private String getCurrentUserId() {
+        // Get current user ID from Firebase Auth
         if (FirebaseAuth.getInstance().getCurrentUser() != null) {
             return FirebaseAuth.getInstance().getCurrentUser().getUid();
         }
@@ -96,6 +124,7 @@ public class NotificationService extends FirebaseMessagingService {
     }
 
     private void createNotificationChannel() {
+        // Create notification channel for Android O and above
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
                     CHANNEL_ID,
@@ -115,48 +144,57 @@ public class NotificationService extends FirebaseMessagingService {
     }
 
     private void showNotification(String title, String message, String incidentType) {
-        // First, we check for permission
+        // Check if app has notification permission
         if (!hasNotificationPermission()) {
             Log.w(TAG, "Notification permission not granted");
-            return; // If there is no permission, we don't proceed
+            return;
         }
 
-        // Use the default icon (or the app icon, as you had)
-        int smallIcon = getApplicationInfo().icon; // This is always available
+        int smallIcon = getApplicationInfo().icon;
 
+        // Build notification with high priority
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setSmallIcon(smallIcon)
                 .setContentTitle(title != null ? title : "Emergency Alert")
                 .setContentText(message)
-                .setStyle(new NotificationCompat.BigTextStyle().bigText(message)) // Added this for longer text
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(message))
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true)
-                .setVibrate(new long[]{0, 1000, 500, 1000}) // Added this if you want vibration
-                .setLights(0xFFF44336, 1000, 1000); // Added this for LED flash
+                .setVibrate(new long[]{0, 1000, 500, 1000})
+                .setLights(0xFFF44336, 1000, 1000);
 
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
-
-        // We get the ID for the notification
         int notificationId = (int) System.currentTimeMillis();
 
-        // Wrap notify() with a try-catch to handle a potential SecurityException
         try {
             notificationManager.notify(notificationId, builder.build());
             Log.d(TAG, "Notification displayed successfully with ID: " + notificationId);
         } catch (SecurityException e) {
-            // This catch will catch the exception if, despite the check, permission is not granted
             Log.e(TAG, "SecurityException when notifying: ", e);
         } catch (Exception e) {
-            // Cover other possible exceptions as well
             Log.e(TAG, "Error showing notification: ", e);
         }
     }
 
     private boolean hasNotificationPermission() {
+        // Check notification permission for Android 13 and above
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             return ContextCompat.checkSelfPermission(this,
                     android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
         }
         return true;
+    }
+
+    private String getTypeDisplayName(String typeKey) {
+        // Convert incident type key to display name
+        if (typeKey == null) return "Unknown Type";
+        switch (typeKey) {
+            case "fire": return "Fire";
+            case "flood": return "Flood";
+            case "earthquake": return "Earthquake";
+            case "storm": return "Storm";
+            case "other": return "Other";
+            default: return typeKey;
+        }
     }
 }

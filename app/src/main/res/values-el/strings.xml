@@ -26,6 +26,10 @@
         <string name="delete">Διαγραφή</string>
         <string name="deleting_incidents">Διαγραφή περιστατικών...</string>
         <string name="delete_error">Σφάλμα διαγραφής</string>
+        <string name="incidents_count">%d περιστατικά</string>
+        <string name="unknown_date">Άγνωστη ημερομηνία</string>
+        <string name="more_incidents">+ %1$d περιστατικά</string>
+        <string name="incident_info">📍 %1$s\n📅 %2$s</string>
 
         <!-- Συμβολοσειρές για ειδοποιήσεις approval -->
         <string name="incident_approved">Εγκεκριμένο Περιστατικό</string>

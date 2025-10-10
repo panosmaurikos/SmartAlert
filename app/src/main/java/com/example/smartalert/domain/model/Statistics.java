@@ -3,7 +3,7 @@ package com.example.smartalert.domain.model;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-
+//  statistics model for incident analysis and reporting
 public class Statistics {
     private int totalIncidents;
     private int totalUsers;
@@ -15,7 +15,7 @@ public class Statistics {
     private Date endDate;
     private Map<String, Double> alarmLevels;
 
-
+     // Default constructor
     public Statistics() {}
 
     // Getters and Setters

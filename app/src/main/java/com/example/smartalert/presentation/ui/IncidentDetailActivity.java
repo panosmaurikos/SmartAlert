@@ -49,7 +49,7 @@ public class IncidentDetailActivity extends AppCompatActivity {
     private List<ClusterData> serverClusters = new ArrayList<>();
     private RequestQueue requestQueue;
 
-    // Data class για τα clusters από τον server
+    // Data class for server clusters
     private static class ClusterData {
         String clusterId;
         String type;
@@ -64,7 +64,7 @@ public class IncidentDetailActivity extends AppCompatActivity {
         int uniqueUserCount;
         int totalReports;
 
-        // Βοηθητικές μέθοδοι
+        // Helper methods
         Date getFirstReportTimeAsDate() { return new Date(firstReportTime); }
         Date getLastReportTimeAsDate() { return new Date(lastReportTime); }
         String getAlarmLevelText() { return alarmLevelText; }
@@ -81,10 +81,12 @@ public class IncidentDetailActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_incident_detail);
 
+        // Initialize Firestore and Volley request queue
         db = FirebaseFirestore.getInstance();
         progressBar = findViewById(R.id.progressBar);
         requestQueue = Volley.newRequestQueue(this);
 
+        // Get incident type from intent
         incidentType = getIntent().getStringExtra("incidentType");
 
         // Back button listener
@@ -93,23 +95,28 @@ public class IncidentDetailActivity extends AppCompatActivity {
             finish();
         });
 
+        // Set up action bar
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
             getSupportActionBar().setTitle(getTypeDisplayName(incidentType));
         }
 
+        // Check if user is admin and load data
         checkAdminStatusAndLoad();
     }
 
     @Override
     public boolean onOptionsItemSelected(android.view.MenuItem item) {
+        // Handle back button in action bar
         if (item.getItemId() == android.R.id.home) {
             finish();
             return true;
         }
         return super.onOptionsItemSelected(item);
     }
+
     private void checkAdminStatusAndLoad() {
+        // Check if current user has admin privileges
         FirebaseAuth auth = FirebaseAuth.getInstance();
         if (auth.getCurrentUser() != null) {
             String uid = auth.getCurrentUser().getUid();
@@ -128,6 +135,7 @@ public class IncidentDetailActivity extends AppCompatActivity {
     }
 
     private void initViews() {
+        // Initialize UI components with default values
         TextView typeTitle = findViewById(R.id.incidentTypeTitle);
         TextView incidentCountText = findViewById(R.id.incidentCount);
         TextView alarmLevel = findViewById(R.id.alarmLevel);
@@ -144,10 +152,12 @@ public class IncidentDetailActivity extends AppCompatActivity {
     }
 
     private void fetchClustersFromServer() {
+        // Show loading indicator
         if (progressBar != null) progressBar.setVisibility(View.VISIBLE);
 
         String serverUrl = "http://10.0.2.2:3000/getClustersByType";
 
+        // Create JSON request body
         JSONObject jsonBody = new JSONObject();
         try {
             jsonBody.put("incidentType", incidentType);
@@ -157,6 +167,7 @@ public class IncidentDetailActivity extends AppCompatActivity {
             return;
         }
 
+        // Make POST request to server
         JsonObjectRequest request = new JsonObjectRequest(
                 Request.Method.POST,
                 serverUrl,
@@ -189,15 +200,17 @@ public class IncidentDetailActivity extends AppCompatActivity {
     }
 
     private void parseServerClusters(JSONObject response) throws JSONException {
+        // Clear existing data
         serverClusters.clear();
         allIncidents.clear();
 
         JSONArray clustersArray = response.getJSONArray("clusters");
 
+        // Parse each cluster from server response
         for (int i = 0; i < clustersArray.length(); i++) {
             JSONObject clusterJson = clustersArray.getJSONObject(i);
 
-            // Parse incidents array
+            // Parse incidents array within cluster
             List<Incident> clusterIncidents = new ArrayList<>();
             JSONArray incidentsArray = clusterJson.getJSONArray("incidents");
             for (int j = 0; j < incidentsArray.length(); j++) {
@@ -207,7 +220,7 @@ public class IncidentDetailActivity extends AppCompatActivity {
                 allIncidents.add(incident);
             }
 
-            // Create cluster object
+            // Create cluster object with all data
             ClusterData cluster = new ClusterData();
             cluster.clusterId = clusterJson.getString("clusterId");
             cluster.type = clusterJson.getString("type");
@@ -225,11 +238,13 @@ public class IncidentDetailActivity extends AppCompatActivity {
             serverClusters.add(cluster);
         }
 
+        // Update UI with new data
         updateClusterViews();
         displayIncidentClusters();
     }
 
     private Incident parseIncidentFromJson(JSONObject incidentJson) throws JSONException {
+        // Convert JSON object to Incident model
         Incident incident = new Incident();
         incident.setId(incidentJson.getString("id"));
         incident.setType(incidentJson.getString("type"));
@@ -246,6 +261,7 @@ public class IncidentDetailActivity extends AppCompatActivity {
     }
 
     private void loadIncidentsWithoutClustering() {
+        // Fallback method when server clustering fails
         Query query = db.collection("incidents")
                 .whereEqualTo("type", incidentType);
 
@@ -261,7 +277,7 @@ public class IncidentDetailActivity extends AppCompatActivity {
                     incident.setId(document.getId());
                     allIncidents.add(incident);
 
-                    // Create simple cluster for each incident (fallback)
+                    // Create simple cluster for each incident (fallback when no server clustering)
                     ClusterData cluster = new ClusterData();
                     cluster.clusterId = document.getId();
                     cluster.type = incident.getType();
@@ -273,7 +289,7 @@ public class IncidentDetailActivity extends AppCompatActivity {
                     cluster.lastReportTime = incident.getTimestamp().getTime();
                     cluster.mainLocation = incident.getLocation();
                     cluster.alarmLevel = 10.0;
-                    cluster.alarmLevelText = "ΧΑΜΗΛΟΣ";
+                    cluster.alarmLevelText = "LOW";
                     cluster.uniqueUserCount = 1;
                     cluster.totalReports = 1;
 
@@ -289,6 +305,7 @@ public class IncidentDetailActivity extends AppCompatActivity {
     }
 
     private void updateClusterViews() {
+        // Update summary information in header
         TextView incidentCountText = findViewById(R.id.incidentCount);
         TextView alarmLevel = findViewById(R.id.alarmLevel);
 
@@ -307,10 +324,12 @@ public class IncidentDetailActivity extends AppCompatActivity {
     }
 
     private void displayIncidentClusters() {
+        // Display all clusters in the scrollable container
         LinearLayout container = findViewById(R.id.incidentsContainer);
         container.removeAllViews();
 
         if (serverClusters.isEmpty()) {
+            // Show message when no incidents found
             TextView noDataText = new TextView(this);
             noDataText.setText(getString(R.string.no_alerts_found, getTypeDisplayName(incidentType)));
             noDataText.setPadding(16, 16, 16, 16);
@@ -319,6 +338,7 @@ public class IncidentDetailActivity extends AppCompatActivity {
             noDataText.setTextColor(ContextCompat.getColor(this, R.color.on_background));
             container.addView(noDataText);
         } else {
+            // Create a card for each cluster
             for (ClusterData cluster : serverClusters) {
                 MaterialCardView card = createClusterCard(cluster);
                 container.addView(card);
@@ -327,6 +347,7 @@ public class IncidentDetailActivity extends AppCompatActivity {
     }
 
     private MaterialCardView createClusterCard(ClusterData cluster) {
+        // Create MaterialCardView for cluster display
         MaterialCardView card = new MaterialCardView(this);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -337,14 +358,15 @@ public class IncidentDetailActivity extends AppCompatActivity {
         card.setRadius(12);
         card.setCardElevation(4);
 
-        // Χρήση theme color για dark mode support
         card.setCardBackgroundColor(ContextCompat.getColor(this, R.color.surface));
 
+        // Create inner layout for card content
         LinearLayout innerLayout = new LinearLayout(this);
         innerLayout.setOrientation(LinearLayout.VERTICAL);
         innerLayout.setPadding(20, 20, 20, 20);
         card.addView(innerLayout);
 
+        // Cluster header with alarm level
         TextView clusterHeader = new TextView(this);
         clusterHeader.setText(getString(R.string.alert_header, cluster.getAlarmLevelText()));
         clusterHeader.setTextSize(18);
@@ -352,6 +374,7 @@ public class IncidentDetailActivity extends AppCompatActivity {
         clusterHeader.setTextColor(ContextCompat.getColor(this, R.color.on_surface));
         innerLayout.addView(clusterHeader);
 
+        // Add cluster information rows
         addClusterInfoRow(innerLayout, getString(R.string.severity_level),
                 String.format(Locale.getDefault(), "%.1f/100", cluster.getAlarmLevel()));
         addClusterInfoRow(innerLayout, getString(R.string.unique_users),
@@ -363,6 +386,7 @@ public class IncidentDetailActivity extends AppCompatActivity {
         addClusterInfoRow(innerLayout, getString(R.string.time_frame),
                 formatDate(cluster.getFirstReportTimeAsDate()) + " - " + formatDate(cluster.getLastReportTimeAsDate()));
 
+        // Add admin buttons if user has admin privileges
         if (isAdmin) {
             View separator = new View(this);
             separator.setLayoutParams(new LinearLayout.LayoutParams(
@@ -375,17 +399,15 @@ public class IncidentDetailActivity extends AppCompatActivity {
             LinearLayout buttonLayout = new LinearLayout(this);
             buttonLayout.setOrientation(LinearLayout.HORIZONTAL);
 
+            // APPROVE button - sends notification and deletes incidents
             Button approveBtn = new Button(this);
             approveBtn.setText(getString(R.string.approve_cluster));
-            approveBtn.setOnClickListener(v -> approveCluster(cluster));
+            approveBtn.setOnClickListener(v -> approveAndNotifyCluster(cluster));
 
+            // REJECT button - just deletes incidents without notification
             Button rejectBtn = new Button(this);
             rejectBtn.setText(getString(R.string.reject_cluster));
             rejectBtn.setOnClickListener(v -> rejectCluster(cluster));
-
-            Button notifyBtn = new Button(this);
-            notifyBtn.setText(getString(R.string.notify_users));
-            notifyBtn.setOnClickListener(v -> sendNotificationToClusterUsers(cluster));
 
             LinearLayout.LayoutParams btnParams = new LinearLayout.LayoutParams(
                     0, LinearLayout.LayoutParams.WRAP_CONTENT, 1
@@ -393,13 +415,13 @@ public class IncidentDetailActivity extends AppCompatActivity {
             btnParams.setMargins(4, 0, 4, 0);
             approveBtn.setLayoutParams(btnParams);
             rejectBtn.setLayoutParams(btnParams);
-            notifyBtn.setLayoutParams(btnParams);
 
             buttonLayout.addView(approveBtn);
             buttonLayout.addView(rejectBtn);
-            buttonLayout.addView(notifyBtn);
+
             innerLayout.addView(buttonLayout);
 
+            // Details button to show individual incidents
             Button detailsBtn = new Button(this);
             detailsBtn.setText(getString(R.string.incident_details));
             detailsBtn.setOnClickListener(v -> showClusterDetails(cluster));
@@ -416,6 +438,7 @@ public class IncidentDetailActivity extends AppCompatActivity {
     }
 
     private void addClusterInfoRow(LinearLayout parent, String label, String value) {
+        // Create a row with label and value for cluster information
         LinearLayout rowLayout = new LinearLayout(this);
         rowLayout.setOrientation(LinearLayout.HORIZONTAL);
         rowLayout.setLayoutParams(new LinearLayout.LayoutParams(
@@ -445,62 +468,130 @@ public class IncidentDetailActivity extends AppCompatActivity {
         parent.addView(rowLayout);
     }
 
-    private void approveCluster(ClusterData cluster) {
-        ProgressDialog progressDialog = new ProgressDialog(this);
-        progressDialog.setMessage(getString(R.string.approving_cluster));
+    private void approveAndNotifyCluster(ClusterData cluster) {
+        // Approve cluster: send notifications and then delete incidents
+        final ProgressDialog progressDialog = new ProgressDialog(this);
+        progressDialog.setMessage("Sending notifications and deleting...");
         progressDialog.show();
 
-        List<String> ids = new ArrayList<>();
-        for (Incident incident : cluster.getIncidents()) {
-            ids.add(incident.getId());
-        }
+        // 1. First send notifications to all users in cluster
+        sendNotificationToClusterUsers(cluster, new NotificationCallback() {
+            @Override
+            public void onNotificationSent() {
+                // 2. After notification is sent, delete incidents
+                deleteIncidentsFromServer(cluster, progressDialog);
+            }
 
-        updateStatusForCluster(ids, "approved", progressDialog);
+            @Override
+            public void onNotificationFailed(String error) {
+                progressDialog.dismiss();
+                Toast.makeText(IncidentDetailActivity.this,
+                        "Notification sending error: " + error, Toast.LENGTH_LONG).show();
+            }
+        });
     }
 
     private void rejectCluster(ClusterData cluster) {
+        // Show confirmation dialog for rejecting cluster
         new AlertDialog.Builder(this)
                 .setTitle(getString(R.string.reject_alert_title))
                 .setMessage(getString(R.string.reject_alert_message, cluster.getTotalReports()))
                 .setPositiveButton(getString(R.string.reject), (dialog, which) -> {
-                    List<String> ids = new ArrayList<>();
-                    for (Incident incident : cluster.getIncidents()) {
-                        ids.add(incident.getId());
-                    }
-                    updateStatusForCluster(ids, "rejected", null);
+                    deleteClusterIncidents(cluster);
                 })
                 .setNegativeButton(getString(R.string.cancel), null)
                 .show();
     }
 
-    private void updateStatusForCluster(List<String> ids, String newStatus, ProgressDialog progressDialog) {
-        final int total = ids.size();
-        final int[] completed = {0};
-        for (String id : ids) {
-            db.collection("incidents").document(id)
-                    .update("status", newStatus, newStatus + "At", new Date())
-                    .addOnSuccessListener(aVoid -> {
-                        completed[0]++;
-                        if (completed[0] == total) {
-                            if (progressDialog != null) progressDialog.dismiss();
-                            Toast.makeText(this,
-                                    getString(R.string.completed_for_reports, total), Toast.LENGTH_SHORT).show();
-                            fetchClustersFromServer();
-                        }
-                    })
-                    .addOnFailureListener(e -> {
-                        if (progressDialog != null) progressDialog.dismiss();
-                        Toast.makeText(this, getString(R.string.update_error, e.getMessage()), Toast.LENGTH_SHORT).show();
-                    });
-        }
+    private void deleteClusterIncidents(ClusterData cluster) {
+        // Show confirmation dialog for deleting incidents
+        new AlertDialog.Builder(this)
+                .setTitle(getString(R.string.delete_incidents_title))
+                .setMessage(getString(R.string.delete_incidents_message, cluster.getTotalReports()))
+                .setPositiveButton(getString(R.string.delete), (dialog, which) -> {
+                    deleteIncidentsFromServer(cluster, null);
+                })
+                .setNegativeButton(getString(R.string.cancel), null)
+                .show();
     }
 
-    private void sendNotificationToClusterUsers(ClusterData cluster) {
+    private void deleteIncidentsFromServer(ClusterData cluster, final ProgressDialog progressDialogParam) {
+        // Delete incidents from server via API call
+        final ProgressDialog progressDialog;
+
+        if (progressDialogParam == null) {
+            progressDialog = new ProgressDialog(this);
+            progressDialog.setMessage(getString(R.string.deleting_incidents));
+            progressDialog.show();
+        } else {
+            progressDialog = progressDialogParam;
+        }
+
+        // Collect all incident IDs for deletion
+        List<String> incidentIds = new ArrayList<>();
+        for (Incident incident : cluster.getIncidents()) {
+            incidentIds.add(incident.getId());
+        }
+
+        String serverUrl = "http://10.0.2.2:3000/deleteIncidents";
+
+        JSONObject jsonBody = new JSONObject();
+        try {
+            jsonBody.put("incidentIds", new JSONArray(incidentIds));
+        } catch (JSONException e) {
+            Log.e("IncidentDetailActivity", "Error creating JSON for delete request", e);
+            progressDialog.dismiss();
+            Toast.makeText(this, getString(R.string.request_preparation_error), Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Make DELETE request to server
+        JsonObjectRequest request = new JsonObjectRequest(
+                Request.Method.POST,
+                serverUrl,
+                jsonBody,
+                response -> {
+                    progressDialog.dismiss();
+                    try {
+                        boolean success = response.getBoolean("success");
+                        if (success) {
+                            String message = response.getString("message");
+                            Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+                            // Refresh data after deletion
+                            fetchClustersFromServer();
+                        } else {
+                            String error = response.getString("error");
+                            Toast.makeText(this, getString(R.string.delete_error) + ": " + error, Toast.LENGTH_LONG).show();
+                        }
+                    } catch (JSONException e) {
+                        Log.e("IncidentDetailActivity", "Error parsing delete response", e);
+                        Toast.makeText(this, getString(R.string.data_parsing_error), Toast.LENGTH_SHORT).show();
+                    }
+                },
+                error -> {
+                    progressDialog.dismiss();
+                    Log.e("IncidentDetailActivity", "Error deleting incidents from server", error);
+                    Toast.makeText(this, getString(R.string.connection_error), Toast.LENGTH_LONG).show();
+                }
+        );
+
+        requestQueue.add(request);
+    }
+
+    // Interface for notification callbacks
+    private interface NotificationCallback {
+        void onNotificationSent();
+        void onNotificationFailed(String error);
+    }
+
+    private void sendNotificationToClusterUsers(ClusterData cluster, NotificationCallback callback) {
+        // Create notification message for cluster
         String msg = getString(R.string.civil_protection_instructions) + " " +
                 getTypeDisplayName(cluster.getType()) + " " +
                 getString(R.string.in_area) + " " + cluster.getMainLocation() + ". " +
                 getString(R.string.number_of_reports) + ": " + cluster.getTotalReports();
 
+        // Collect unique user IDs from all incidents in cluster
         Set<String> userIdsSet = new HashSet<>();
         for (Incident incident : cluster.getIncidents()) {
             userIdsSet.add(incident.getUserId());
@@ -508,30 +599,28 @@ public class IncidentDetailActivity extends AppCompatActivity {
         List<String> userIds = new ArrayList<>(userIdsSet);
 
         if (userIds.isEmpty()) {
-            Toast.makeText(this, getString(R.string.no_users_found), Toast.LENGTH_SHORT).show();
-            Log.d("IncidentDetailActivity", "No userIds found to retrieve tokens.");
+            callback.onNotificationFailed("No users found for notification");
             return;
         }
 
         Log.d("IncidentDetailActivity", getString(R.string.users_found, userIds.size()));
-        sendAlertToServer(userIds, getString(R.string.alert_update), msg, cluster.getType());
-    }
 
-    private void sendAlertToServer(List<String> userIds, String title, String message, String incidentType) {
         String serverUrl = "http://10.0.2.2:3000/sendAlert";
 
+        // Create notification request
         JSONObject jsonBody = new JSONObject();
         try {
-            jsonBody.put("title", title);
-            jsonBody.put("message", message);
-            jsonBody.put("incidentType", incidentType);
+            jsonBody.put("title", getString(R.string.alert_update));
+            jsonBody.put("message", msg);
+            jsonBody.put("incidentType", cluster.getType());
             jsonBody.put("userIds", new JSONArray(userIds));
         } catch (JSONException e) {
             Log.e("IncidentDetailActivity", "Error creating JSON body for server request", e);
-            Toast.makeText(this, getString(R.string.request_preparation_error), Toast.LENGTH_SHORT).show();
+            callback.onNotificationFailed("Request creation error");
             return;
         }
 
+        // Send notification request to server
         JsonObjectRequest request = new JsonObjectRequest(Request.Method.POST, serverUrl, jsonBody,
                 response -> {
                     Log.d("IncidentDetailActivity", "Server response: " + response.toString());
@@ -539,33 +628,26 @@ public class IncidentDetailActivity extends AppCompatActivity {
                         boolean success = response.getBoolean("success");
                         if (success) {
                             Toast.makeText(this, getString(R.string.notification_sent), Toast.LENGTH_LONG).show();
+                            callback.onNotificationSent();
                         } else {
                             String errorMsg = response.getString("error");
-                            Toast.makeText(this, getString(R.string.server_failure, errorMsg), Toast.LENGTH_LONG).show();
+                            callback.onNotificationFailed(errorMsg);
                         }
                     } catch (JSONException e) {
                         Log.e("IncidentDetailActivity", "Error parsing server response", e);
-                        Toast.makeText(this, getString(R.string.unknown_server_error), Toast.LENGTH_LONG).show();
+                        callback.onNotificationFailed("Response parsing error");
                     }
                 },
                 error -> {
                     Log.e("IncidentDetailActivity", "Error sending to server: ", error);
-                    if (error.networkResponse != null) {
-                        Log.e("IncidentDetailActivity", "HTTP Status Code: " + error.networkResponse.statusCode);
-                    }
-                    Toast.makeText(this, getString(R.string.notification_send_error, error.getMessage()), Toast.LENGTH_LONG).show();
-                }) {
-            @Override
-            public Map<String, String> getHeaders() {
-                Map<String, String> headers = new HashMap<>();
-                headers.put("Content-Type", "application/json");
-                return headers;
-            }
-        };
+                    callback.onNotificationFailed("Connection error");
+                });
+
         requestQueue.add(request);
     }
 
     private void showClusterDetails(ClusterData cluster) {
+        // Show detailed view of all incidents in cluster
         StringBuilder details = new StringBuilder();
         details.append(getString(R.string.alert_details)).append(":\n\n");
         for (int i = 0; i < cluster.getIncidents().size(); i++) {
@@ -584,12 +666,14 @@ public class IncidentDetailActivity extends AppCompatActivity {
     }
 
     private String formatDate(Date date) {
+        // Format date for display
         if (date == null) return getString(R.string.unknown);
         SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
         return sdf.format(date);
     }
 
     private String getTypeDisplayName(String typeKey) {
+        // Convert incident type key to display name
         if (typeKey == null) return getString(R.string.unknown_type);
         switch (typeKey) {
             case "fire": return getString(R.string.fire);

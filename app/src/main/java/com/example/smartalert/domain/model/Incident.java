@@ -2,7 +2,7 @@ package com.example.smartalert.domain.model;
 
 import java.util.Date;
 import com.google.firebase.Timestamp;
-
+// Domain model representing an incident reported by users
 public class Incident {
     private String id;
     private String userId;
@@ -16,8 +16,11 @@ public class Incident {
     private String location;
 
     public Incident() {}
-
+    /**
+     * Default constructor required for Firebase deserialization
+     */
     public Incident(String userId, String type, String comments,
+
                     double latitude, double longitude, Date timestamp,
                     String photoUrl) {
         this.userId = userId;
